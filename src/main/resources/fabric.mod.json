@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "liquidvoidrenderer",
+  "version": "${version}",
+  "name": "Liquid Void Renderer",
+  "description": "Renders liquid flowing into the void, seamlessly",
+  "authors": [
+    "DaFuqs"
+  ],
+  "contact": {
+    "website": "https://github.com/DaFuqs/LiquidVoidRenderer",
+    "repo": "https://github.com/DaFuqs/LiquidVoidRenderer"
+  },
+  "license": "MIT",
+  "icon": "assets/liquidvoidrenderer/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "de.dafuqs.liquidvoidrenderer.LiquidVoidRendererClient"
+    ]
+  },
+  "mixins": [
+    "liquidvoidrenderer.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.11.3",
+    "minecraft": ">=1.17.1"
+  }
+}
