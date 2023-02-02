@@ -1,203 +1,186 @@
 package de.dafuqs.liquidvoidrenderer.mixin.client;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.LeavesBlock;
-import net.minecraft.block.TransparentBlock;
-import net.minecraft.client.color.world.BiomeColors;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.block.FluidRenderer;
-import net.minecraft.client.texture.Sprite;
-import net.minecraft.fluid.Fluid;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.tag.FluidTags;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.BlockRenderView;
-import net.minecraft.world.BlockView;
-import org.spongepowered.asm.mixin.Final;
-import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-
-import static net.minecraft.client.render.block.FluidRenderer.method_29708;
+import net.fabricmc.fabric.api.transfer.v1.client.fluid.*;
+import net.fabricmc.fabric.api.transfer.v1.fluid.*;
+import net.minecraft.block.*;
+import net.minecraft.client.render.*;
+import net.minecraft.client.render.block.*;
+import net.minecraft.client.texture.*;
+import net.minecraft.fluid.*;
+import net.minecraft.util.math.*;
+import net.minecraft.world.*;
+import org.spongepowered.asm.mixin.*;
+import org.spongepowered.asm.mixin.injection.*;
+import org.spongepowered.asm.mixin.injection.callback.*;
 
 @Mixin(FluidRenderer.class)
 public abstract class FluidRendererMixin {
 
-    @Shadow @Final private Sprite[] lavaSprites;
-
-    @Shadow @Final private Sprite[] waterSprites;
+    @Shadow
+    protected abstract int getLight(BlockRenderView world, BlockPos pos);
 
     @Shadow
-    private static boolean isSameFluid(BlockView world, BlockPos pos, Direction side, FluidState state) {
-        return false;
-    }
+    private Sprite waterOverlaySprite;
 
     @Shadow
-    private static boolean isSideCovered(BlockView world, BlockPos pos, Direction direction, float maxDeviation) {
-        return false;
+    private static boolean isSameFluid(FluidState a, FluidState b) {
+        throw new AssertionError();
     }
-
-    @Shadow protected abstract float getNorthWestCornerFluidHeight(BlockView world, BlockPos pos, Fluid fluid);
-
-    @Shadow protected abstract void vertex(VertexConsumer vertexConsumer, double x, double y, double z, float red, float green, float blue, float u, float v, int light);
-
-    @Shadow protected abstract int getLight(BlockRenderView world, BlockPos pos);
-
-    @Shadow private Sprite waterOverlaySprite;
 
     @Inject(method = "render", at = @At("HEAD"))
-    public void render(BlockRenderView world, BlockPos pos, VertexConsumer vertexConsumer, FluidState state, CallbackInfoReturnable<Boolean> cir) {
+    public void render(BlockRenderView world, BlockPos pos, VertexConsumer vertexConsumer, BlockState blockState, FluidState fluidState, CallbackInfo ci) {
         if (isDirectlyAboveVoid(world, pos)) {
-            renderFluidInVoid(world, pos, vertexConsumer, state);
+            renderFluidInVoid(world, pos, vertexConsumer, fluidState);
         }
     }
 
-    private boolean isDirectlyAboveVoid(BlockRenderView world, BlockPos blockPos) {
+    private static boolean isDirectlyAboveVoid(BlockView world, BlockPos blockPos) {
         return blockPos.getY() == world.getBottomY();
     }
 
-    private void renderFluidInVoid(BlockRenderView world, BlockPos pos, VertexConsumer vertexConsumer, FluidState state) {
-        pos = pos.down();
-        boolean isLavaFluid = state.isIn(FluidTags.LAVA);
-        Sprite[] sprites = isLavaFluid ? this.lavaSprites : this.waterSprites;
-        BlockState blockState = world.getBlockState(pos);
-        int i = isLavaFluid ? 16777215 : BiomeColors.getWaterColor(world, pos);
-        float f = (float)(i >> 16 & 255) / 255.0F;
-        float g = (float)(i >> 8 & 255) / 255.0F;
-        float h = (float)(i & 255) / 255.0F;
-        boolean bl2 = !isSameFluid(world, pos, Direction.UP, state);
-        boolean bl3 = method_29708(world, pos, state, blockState, Direction.DOWN) && !isSideCovered(world, pos, Direction.DOWN, 0.8888889F);
-        boolean bl4 = method_29708(world, pos, state, blockState, Direction.NORTH);
-        boolean bl5 = method_29708(world, pos, state, blockState, Direction.SOUTH);
-        boolean bl6 = method_29708(world, pos, state, blockState, Direction.WEST);
-        boolean bl7 = method_29708(world, pos, state, blockState, Direction.EAST);
-        if (!bl2 && !bl3 && !bl7 && !bl6 && !bl4 && !bl5) {
+    @Inject(method = "isSideCovered(Lnet/minecraft/world/BlockView;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/util/math/Direction;FLnet/minecraft/block/BlockState;)Z", at = @At("HEAD"), cancellable = true)
+    private static void isSideCovered(BlockView world, BlockPos pos, Direction direction, float maxDeviation, BlockState state, CallbackInfoReturnable<Boolean> cir) {
+        if (direction == Direction.DOWN && isDirectlyAboveVoid(world, pos)) {
+            cir.setReturnValue(true);
+        }
+    }
 
-        } else {
-            boolean bl8 = false;
-            float j = world.getBrightness(Direction.DOWN, true);
-            float k = world.getBrightness(Direction.UP, true);
-            float l = world.getBrightness(Direction.NORTH, true);
-            float m = world.getBrightness(Direction.WEST, true);
-            float n = this.getNorthWestCornerFluidHeight(world, pos, state.getFluid());
-            float o = this.getNorthWestCornerFluidHeight(world, pos.south(), state.getFluid());
-            float p = this.getNorthWestCornerFluidHeight(world, pos.east().south(), state.getFluid());
-            float q = this.getNorthWestCornerFluidHeight(world, pos.east(), state.getFluid());
-            double d = (pos.getX() & 15);
-            double e = (pos.getY() & 15);
-            double r = (pos.getZ() & 15);
-            float t = bl3 ? 0.001F : 0.0F;
-            float ag;
-            float ai;
-            float ca;
-            float cb;
-            float aj;
-            float al;
-            float an;
-            float cg;
-            float ch;
+    private void renderFluidInVoid(BlockRenderView world, BlockPos pos, VertexConsumer vertexConsumer, FluidState fluidState) {
+        Fluid fluid = fluidState.getFluid();
+        if (fluid != Fluids.EMPTY) {
+            BlockState northBlockState = world.getBlockState(pos.offset(Direction.NORTH));
+            FluidState northFluidState = northBlockState.getFluidState();
+            BlockState southBlockState = world.getBlockState(pos.offset(Direction.SOUTH));
+            FluidState southFluidState = southBlockState.getFluidState();
+            BlockState westBlockState = world.getBlockState(pos.offset(Direction.WEST));
+            FluidState westFluidState = westBlockState.getFluidState();
+            BlockState eastBlockState = world.getBlockState(pos.offset(Direction.EAST));
+            FluidState eastFluidState = eastBlockState.getFluidState();
 
-            if (bl3) {
-                ag = sprites[0].getMinU();
-                ai = sprites[0].getMaxU();
-                ca = sprites[0].getMinV();
-                cb = sprites[0].getMaxV();
-                int bb = this.getLight(world, pos.down());
-                aj = j * f;
-                al = j * g;
-                an = j * h;
-                this.vertex(vertexConsumer, d, e + (double)t, r + 1.0D, aj, al, an, ag, cb, bb);
-                this.vertex(vertexConsumer, d, e + (double)t, r, aj, al, an, ag, ca, bb);
-                this.vertex(vertexConsumer, d + 1.0D, e + (double)t, r, aj, al, an, ai, ca, bb);
-                this.vertex(vertexConsumer, d + 1.0D, e + (double)t, r + 1.0D, aj, al, an, ai, cb, bb);
-            }
+            boolean bl2 = false;
+            boolean bl3 = false;
+            boolean sameFluidNorth = isSameFluid(fluidState, northFluidState);
+            boolean sameFluidSouth = isSameFluid(fluidState, southFluidState);
+            boolean sameFluidWest = isSameFluid(fluidState, westFluidState);
+            boolean sameFluidEast = isSameFluid(fluidState, eastFluidState);
+            if (!(!bl2 && !bl3 && !sameFluidEast && !sameFluidWest && !sameFluidNorth && !sameFluidSouth)) {
+                float brightnessUp = world.getBrightness(Direction.UP, true);
+                float brightnessNorth = world.getBrightness(Direction.NORTH, true);
+                float brightnessWest = world.getBrightness(Direction.WEST, true);
+                float n = 1.0F;
+                float o = 1.0F;
+                float p = 1.0F;
+                float q = 1.0F;
+                double d = (pos.getX() & 15);
+                double e = (pos.getY() & 15);
+                double r = (pos.getZ() & 15);
+                float t = 0.0F;
+                float ca = 0;
+                float cb;
+                float u1;
+                float u2;
 
-            int bf = this.getLight(world, pos);
+                int light = this.getLight(world, pos);
 
-            for(int bg = 0; bg < 4; ++bg) {
-                double cc;
-                double ce;
-                double cd;
-                double cf;
-                Direction direction3;
-                boolean bl12;
-                if (bg == 0) {
-                    ca = n;
-                    cb = q;
-                    cc = d;
-                    cd = d + 1.0D;
-                    ce = r + 0.0010000000474974513D;
-                    cf = r + 0.0010000000474974513D;
-                    direction3 = Direction.NORTH;
-                    bl12 = bl4;
-                } else if (bg == 1) {
-                    ca = p;
-                    cb = o;
-                    cc = d + 1.0D;
-                    cd = d;
-                    ce = r + 1.0D - 0.0010000000474974513D;
-                    cf = r + 1.0D - 0.0010000000474974513D;
-                    direction3 = Direction.SOUTH;
-                    bl12 = bl5;
-                } else if (bg == 2) {
-                    ca = o;
-                    cb = n;
-                    cc = d + 0.0010000000474974513D;
-                    cd = d + 0.0010000000474974513D;
-                    ce = r + 1.0D;
-                    cf = r;
-                    direction3 = Direction.WEST;
-                    bl12 = bl6;
-                } else {
-                    ca = q;
-                    cb = p;
-                    cc = d + 1.0D - 0.0010000000474974513D;
-                    cd = d + 1.0D - 0.0010000000474974513D;
-                    ce = r;
-                    cf = r + 1.0D;
-                    direction3 = Direction.EAST;
-                    bl12 = bl7;
-                }
+                FluidVariant fluidVariant = FluidVariant.of(fluid);
+                Sprite sprites = FluidVariantRendering.getSprites(fluidVariant)[1];
+                int color = FluidVariantRendering.getColor(fluidVariant, world, pos);
+                int[] colors = unpackColor(color);
 
-                if (bl12 && !isSideCovered(world, pos, direction3, Math.max(ca, cb))) {
-                    bl8 = true;
-                    BlockPos blockPos = pos.offset(direction3);
-                    Sprite sprite3 = sprites[1];
-                    if (!isLavaFluid) {
-                        Block block = world.getBlockState(blockPos).getBlock();
-                        if (block instanceof TransparentBlock || block instanceof LeavesBlock) {
-                            sprite3 = this.waterOverlaySprite;
-                        }
+                float redF = colors[1] / 255F;
+                float greenF = colors[2] / 255F;
+                float blueF = colors[3] / 255F;
+
+                float alpha1 = colors[0] / 255F;
+                float alpha2 = 0.4F * (colors[0] / 255F);
+                float alpha3 = 0.0F;
+
+                for (int i = 0; i < 4; ++i) { // directions
+                    double x1;
+                    double z1;
+                    double x2;
+                    double z2;
+                    boolean shouldRender;
+                    if (i == 0) {
+                        ca = n;
+                        cb = q;
+                        x1 = d;
+                        x2 = d + 1.0D;
+                        z1 = r + 0.0010000000474974513D;
+                        z2 = r + 0.0010000000474974513D;
+                        shouldRender = sameFluidNorth;
+                    } else if (i == 1) {
+                        cb = o;
+                        x1 = d + 1.0D;
+                        x2 = d;
+                        z1 = r + 1.0D - 0.0010000000474974513D;
+                        z2 = r + 1.0D - 0.0010000000474974513D;
+                        shouldRender = sameFluidSouth;
+                    } else if (i == 2) {
+                        ca = o;
+                        cb = n;
+                        x1 = d + 0.0010000000474974513D;
+                        x2 = d + 0.0010000000474974513D;
+                        z1 = r + 1.0D;
+                        z2 = r;
+                        shouldRender = sameFluidWest;
+                    } else {
+                        ca = q;
+                        cb = p;
+                        x1 = d + 1.0D - 0.0010000000474974513D;
+                        x2 = d + 1.0D - 0.0010000000474974513D;
+                        z1 = r;
+                        z2 = r + 1.0D;
+                        shouldRender = sameFluidEast;
                     }
 
-                    cg = sprite3.getFrameU(0.0D);
-                    ch = sprite3.getFrameU(8.0D);
-                    float ci = sprite3.getFrameV((double)((1.0F - ca) * 16.0F * 0.5F));
-                    float cj = sprite3.getFrameV((double)((1.0F - cb) * 16.0F * 0.5F));
-                    float ck = sprite3.getFrameV(8.0D);
-                    float cl = bg < 2 ? l : m;
-                    float cm = k * cl * f;
-                    float cn = k * cl * g;
-                    float co = k * cl * h;
-                    this.vertex(vertexConsumer, cc, e + (double)ca, ce, cm, cn, co, cg, ci, bf);
-                    this.vertex(vertexConsumer, cd, e + (double)cb, cf, cm, cn, co, ch, cj, bf);
-                    this.vertex(vertexConsumer, cd, e + (double)t, cf, cm, cn, co, ch, ck, bf);
-                    this.vertex(vertexConsumer, cc, e + (double)t, ce, cm, cn, co, cg, ck, bf);
-                    if (sprite3 != this.waterOverlaySprite) {
-                        this.vertex(vertexConsumer, cc, e + (double)t, ce, cm, cn, co, cg, ck, bf);
-                        this.vertex(vertexConsumer, cd, e + (double)t, cf, cm, cn, co, ch, ck, bf);
-                        this.vertex(vertexConsumer, cd, e + (double)cb, cf, cm, cn, co, ch, cj, bf);
-                        this.vertex(vertexConsumer, cc, e + (double)ca, ce, cm, cn, co, cg, ci, bf);
+                    if (!shouldRender) {
+                        u1 = sprites.getFrameU(0.0D);
+                        u2 = sprites.getFrameU(8.0D);
+                        float v1 = sprites.getFrameV(((1.0F - ca) * 16.0F * 0.5F));
+                        float v2 = sprites.getFrameV(((1.0F - cb) * 16.0F * 0.5F));
+                        float v3 = sprites.getFrameV(8.0D);
+                        float sidedBrightness = i < 2 ? brightnessNorth : brightnessWest;
+                        float red = brightnessUp * sidedBrightness * redF;
+                        float green = brightnessUp * sidedBrightness * greenF;
+                        float blue = brightnessUp * sidedBrightness * blueF;
+                        vertex(vertexConsumer, x1, e + (double) ca - 1, z1, red, green, blue, u1, v1, light, alpha1);
+                        vertex(vertexConsumer, x2, e + (double) cb - 1, z2, red, green, blue, u2, v2, light, alpha1);
+                        vertex(vertexConsumer, x2, e + (double) t - 1, z2, red, green, blue, u2, v3, light, alpha2);
+                        vertex(vertexConsumer, x1, e + (double) t - 1, z1, red, green, blue, u1, v3, light, alpha2);
+
+                        vertex(vertexConsumer, x1, e + (double) ca - 2, z1, red, green, blue, u1, v1, light, alpha2);
+                        vertex(vertexConsumer, x2, e + (double) cb - 2, z2, red, green, blue, u2, v2, light, alpha2);
+                        vertex(vertexConsumer, x2, e + (double) t - 2, z2, red, green, blue, u2, v3, light, alpha3);
+                        vertex(vertexConsumer, x1, e + (double) t - 2, z1, red, green, blue, u1, v3, light, alpha3);
+                        if (sprites != this.waterOverlaySprite) {
+                            vertex(vertexConsumer, x1, e + (double) t - 1, z1, red, green, blue, u1, v3, light, alpha2);
+                            vertex(vertexConsumer, x2, e + (double) t - 1, z2, red, green, blue, u2, v3, light, alpha2);
+                            vertex(vertexConsumer, x2, e + (double) cb - 1, z2, red, green, blue, u2, v2, light, alpha1);
+                            vertex(vertexConsumer, x1, e + (double) ca - 1, z1, red, green, blue, u1, v1, light, alpha1);
+
+                            vertex(vertexConsumer, x1, e + (double) t - 2, z1, red, green, blue, u1, v3, light, alpha3);
+                            vertex(vertexConsumer, x2, e + (double) t - 2, z2, red, green, blue, u2, v3, light, alpha3);
+                            vertex(vertexConsumer, x2, e + (double) cb - 2, z2, red, green, blue, u2, v2, light, alpha2);
+                            vertex(vertexConsumer, x1, e + (double) ca - 2, z1, red, green, blue, u1, v1, light, alpha2);
+                        }
                     }
                 }
             }
         }
+    }
+
+    private void vertex(VertexConsumer vertexConsumer, double x, double y, double z, float red, float green, float blue, float u, float v, int light, float alpha) {
+        vertexConsumer.vertex(x, y, z).color(red, green, blue, alpha).texture(u, v).light(light).normal(0.0F, 1.0F, 0.0F).next();
+    }
+
+    private static int[] unpackColor(int color) {
+        final int[] colors = new int[4];
+        colors[0] = color >> 24 & 0xff; // alpha
+        colors[1] = color >> 16 & 0xff; // red
+        colors[2] = color >> 8 & 0xff; // green
+        colors[3] = color & 0xff; // blue
+        return colors;
     }
 
 }
