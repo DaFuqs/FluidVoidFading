@@ -57,117 +57,115 @@ public abstract class FluidRendererMixin {
             BlockState eastBlockState = world.getBlockState(pos.offset(Direction.EAST));
             FluidState eastFluidState = eastBlockState.getFluidState();
 
-            boolean bl2 = false;
-            boolean bl3 = false;
             boolean sameFluidNorth = isSameFluid(fluidState, northFluidState);
             boolean sameFluidSouth = isSameFluid(fluidState, southFluidState);
             boolean sameFluidWest = isSameFluid(fluidState, westFluidState);
             boolean sameFluidEast = isSameFluid(fluidState, eastFluidState);
-            if (!(!bl2 && !bl3 && !sameFluidEast && !sameFluidWest && !sameFluidNorth && !sameFluidSouth)) {
-                float brightnessUp = world.getBrightness(Direction.UP, true);
-                float brightnessNorth = world.getBrightness(Direction.NORTH, true);
-                float brightnessWest = world.getBrightness(Direction.WEST, true);
-                float n = 1.0F;
-                float o = 1.0F;
-                float p = 1.0F;
-                float q = 1.0F;
-                double d = (pos.getX() & 15);
-                double e = (pos.getY() & 15);
-                double r = (pos.getZ() & 15);
-                float t = 0.0F;
-                float ca = 0;
-                float cb;
-                float u1;
-                float u2;
 
-                int light = this.getLight(world, pos);
+            float brightnessUp = world.getBrightness(Direction.UP, true);
+            float brightnessNorth = world.getBrightness(Direction.NORTH, true);
+            float brightnessWest = world.getBrightness(Direction.WEST, true);
+            float n = 1.0F;
+            float o = 1.0F;
+            float p = 1.0F;
+            float q = 1.0F;
+            double d = (pos.getX() & 15);
+            double e = (pos.getY() & 15);
+            double r = (pos.getZ() & 15);
+            float t = 0.0F;
+            float ca = 0;
+            float cb;
+            float u1;
+            float u2;
 
-                FluidVariant fluidVariant = FluidVariant.of(fluid);
-                Sprite sprites = FluidVariantRendering.getSprites(fluidVariant)[1];
-                int color = FluidVariantRendering.getColor(fluidVariant, world, pos);
-                int[] colors = unpackColor(color);
+            int light = this.getLight(world, pos);
 
-                float redF = colors[1] / 255F;
-                float greenF = colors[2] / 255F;
-                float blueF = colors[3] / 255F;
+            FluidVariant fluidVariant = FluidVariant.of(fluid);
+            Sprite sprite = FluidVariantRendering.getSprites(fluidVariant)[1];
+            int color = FluidVariantRendering.getColor(fluidVariant, world, pos);
+            int[] colors = unpackColor(color);
 
-                float alpha1 = colors[0] / 255F;
-                float alpha2 = 0.4F * (colors[0] / 255F);
-                float alpha3 = 0.0F;
+            float redF = colors[1] / 255F;
+            float greenF = colors[2] / 255F;
+            float blueF = colors[3] / 255F;
 
-                for (int i = 0; i < 4; ++i) { // directions
-                    double x1;
-                    double z1;
-                    double x2;
-                    double z2;
-                    boolean shouldRender;
-                    if (i == 0) {
-                        ca = n;
-                        cb = q;
-                        x1 = d;
-                        x2 = d + 1.0D;
-                        z1 = r + 0.0010000000474974513D;
-                        z2 = r + 0.0010000000474974513D;
-                        shouldRender = sameFluidNorth;
-                    } else if (i == 1) {
-                        cb = o;
-                        x1 = d + 1.0D;
-                        x2 = d;
-                        z1 = r + 1.0D - 0.0010000000474974513D;
-                        z2 = r + 1.0D - 0.0010000000474974513D;
-                        shouldRender = sameFluidSouth;
-                    } else if (i == 2) {
-                        ca = o;
-                        cb = n;
-                        x1 = d + 0.0010000000474974513D;
-                        x2 = d + 0.0010000000474974513D;
-                        z1 = r + 1.0D;
-                        z2 = r;
-                        shouldRender = sameFluidWest;
-                    } else {
-                        ca = q;
-                        cb = p;
-                        x1 = d + 1.0D - 0.0010000000474974513D;
-                        x2 = d + 1.0D - 0.0010000000474974513D;
-                        z1 = r;
-                        z2 = r + 1.0D;
-                        shouldRender = sameFluidEast;
-                    }
+            float alpha1 = colors[0] / 255F;
+            float alpha2 = 0.4F * (colors[0] / 255F);
+            float alpha3 = 0.0F;
 
-                    if (!shouldRender) {
-                        u1 = sprites.getFrameU(0.0D);
-                        u2 = sprites.getFrameU(8.0D);
-                        float v1 = sprites.getFrameV(((1.0F - ca) * 16.0F * 0.5F));
-                        float v2 = sprites.getFrameV(((1.0F - cb) * 16.0F * 0.5F));
-                        float v3 = sprites.getFrameV(8.0D);
-                        float sidedBrightness = i < 2 ? brightnessNorth : brightnessWest;
-                        float red = brightnessUp * sidedBrightness * redF;
-                        float green = brightnessUp * sidedBrightness * greenF;
-                        float blue = brightnessUp * sidedBrightness * blueF;
-                        vertex(vertexConsumer, x1, e + (double) ca - 1, z1, red, green, blue, u1, v1, light, alpha1);
-                        vertex(vertexConsumer, x2, e + (double) cb - 1, z2, red, green, blue, u2, v2, light, alpha1);
-                        vertex(vertexConsumer, x2, e + (double) t - 1, z2, red, green, blue, u2, v3, light, alpha2);
+            for (int i = 0; i < 4; ++i) { // directions
+                double x1;
+                double z1;
+                double x2;
+                double z2;
+                boolean shouldRender;
+                if (i == 0) {
+                    ca = n;
+                    cb = q;
+                    x1 = d;
+                    x2 = d + 1.0D;
+                    z1 = r + 0.0010000000474974513D;
+                    z2 = r + 0.0010000000474974513D;
+                    shouldRender = sameFluidNorth;
+                } else if (i == 1) {
+                    cb = o;
+                    x1 = d + 1.0D;
+                    x2 = d;
+                    z1 = r + 1.0D - 0.0010000000474974513D;
+                    z2 = r + 1.0D - 0.0010000000474974513D;
+                    shouldRender = sameFluidSouth;
+                } else if (i == 2) {
+                    ca = o;
+                    cb = n;
+                    x1 = d + 0.0010000000474974513D;
+                    x2 = d + 0.0010000000474974513D;
+                    z1 = r + 1.0D;
+                    z2 = r;
+                    shouldRender = sameFluidWest;
+                } else {
+                    ca = q;
+                    cb = p;
+                    x1 = d + 1.0D - 0.0010000000474974513D;
+                    x2 = d + 1.0D - 0.0010000000474974513D;
+                    z1 = r;
+                    z2 = r + 1.0D;
+                    shouldRender = sameFluidEast;
+                }
+
+                if (!shouldRender) {
+                    u1 = sprite.getFrameU(0.0D);
+                    u2 = sprite.getFrameU(8.0D);
+                    float v1 = sprite.getFrameV(((1.0F - ca) * 16.0F * 0.5F));
+                    float v2 = sprite.getFrameV(((1.0F - cb) * 16.0F * 0.5F));
+                    float v3 = sprite.getFrameV(8.0D);
+                    float sidedBrightness = i < 2 ? brightnessNorth : brightnessWest;
+                    float red = brightnessUp * sidedBrightness * redF;
+                    float green = brightnessUp * sidedBrightness * greenF;
+                    float blue = brightnessUp * sidedBrightness * blueF;
+                    vertex(vertexConsumer, x1, e + (double) ca - 1, z1, red, green, blue, u1, v1, light, alpha1);
+                    vertex(vertexConsumer, x2, e + (double) cb - 1, z2, red, green, blue, u2, v2, light, alpha1);
+                    vertex(vertexConsumer, x2, e + (double) t - 1, z2, red, green, blue, u2, v3, light, alpha2);
+                    vertex(vertexConsumer, x1, e + (double) t - 1, z1, red, green, blue, u1, v3, light, alpha2);
+
+                    vertex(vertexConsumer, x1, e + (double) ca - 2, z1, red, green, blue, u1, v1, light, alpha2);
+                    vertex(vertexConsumer, x2, e + (double) cb - 2, z2, red, green, blue, u2, v2, light, alpha2);
+                    vertex(vertexConsumer, x2, e + (double) t - 2, z2, red, green, blue, u2, v3, light, alpha3);
+                    vertex(vertexConsumer, x1, e + (double) t - 2, z1, red, green, blue, u1, v3, light, alpha3);
+                    if (sprite != this.waterOverlaySprite) {
                         vertex(vertexConsumer, x1, e + (double) t - 1, z1, red, green, blue, u1, v3, light, alpha2);
+                        vertex(vertexConsumer, x2, e + (double) t - 1, z2, red, green, blue, u2, v3, light, alpha2);
+                        vertex(vertexConsumer, x2, e + (double) cb - 1, z2, red, green, blue, u2, v2, light, alpha1);
+                        vertex(vertexConsumer, x1, e + (double) ca - 1, z1, red, green, blue, u1, v1, light, alpha1);
 
-                        vertex(vertexConsumer, x1, e + (double) ca - 2, z1, red, green, blue, u1, v1, light, alpha2);
-                        vertex(vertexConsumer, x2, e + (double) cb - 2, z2, red, green, blue, u2, v2, light, alpha2);
-                        vertex(vertexConsumer, x2, e + (double) t - 2, z2, red, green, blue, u2, v3, light, alpha3);
                         vertex(vertexConsumer, x1, e + (double) t - 2, z1, red, green, blue, u1, v3, light, alpha3);
-                        if (sprites != this.waterOverlaySprite) {
-                            vertex(vertexConsumer, x1, e + (double) t - 1, z1, red, green, blue, u1, v3, light, alpha2);
-                            vertex(vertexConsumer, x2, e + (double) t - 1, z2, red, green, blue, u2, v3, light, alpha2);
-                            vertex(vertexConsumer, x2, e + (double) cb - 1, z2, red, green, blue, u2, v2, light, alpha1);
-                            vertex(vertexConsumer, x1, e + (double) ca - 1, z1, red, green, blue, u1, v1, light, alpha1);
-
-                            vertex(vertexConsumer, x1, e + (double) t - 2, z1, red, green, blue, u1, v3, light, alpha3);
-                            vertex(vertexConsumer, x2, e + (double) t - 2, z2, red, green, blue, u2, v3, light, alpha3);
-                            vertex(vertexConsumer, x2, e + (double) cb - 2, z2, red, green, blue, u2, v2, light, alpha2);
-                            vertex(vertexConsumer, x1, e + (double) ca - 2, z1, red, green, blue, u1, v1, light, alpha2);
-                        }
+                        vertex(vertexConsumer, x2, e + (double) t - 2, z2, red, green, blue, u2, v3, light, alpha3);
+                        vertex(vertexConsumer, x2, e + (double) cb - 2, z2, red, green, blue, u2, v2, light, alpha2);
+                        vertex(vertexConsumer, x1, e + (double) ca - 2, z1, red, green, blue, u1, v1, light, alpha2);
                     }
                 }
             }
         }
+
     }
 
     private void vertex(VertexConsumer vertexConsumer, double x, double y, double z, float red, float green, float blue, float u, float v, int light, float alpha) {
