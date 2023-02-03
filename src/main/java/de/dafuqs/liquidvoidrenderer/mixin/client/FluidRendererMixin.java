@@ -90,7 +90,7 @@ public abstract class FluidRendererMixin {
             float blueF = colors[3] / 255F;
 
             float alpha1 = colors[0] / 255F;
-            float alpha2 = 0.4F * (colors[0] / 255F);
+            float alpha2 = 0.3F * (colors[0] / 255F);
             float alpha3 = 0.0F;
 
             for (int i = 0; i < 4; ++i) { // directions
