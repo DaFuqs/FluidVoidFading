@@ -11,7 +11,7 @@
     "website": "https://github.com/DaFuqs/LiquidVoidRenderer",
     "repo": "https://github.com/DaFuqs/LiquidVoidRenderer"
   },
-  "license": "MIT",
+  "license": "LGPLv3",
   "icon": "assets/liquidvoidrenderer/icon.png",
   "environment": "client",
   "entrypoints": {
