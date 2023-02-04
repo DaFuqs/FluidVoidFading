@@ -1,4 +1,4 @@
-package de.dafuqs.liquidvoidrenderer.mixin.client;
+package de.dafuqs.fluidvoidfading.mixin.client;
 
 import net.fabricmc.fabric.api.transfer.v1.client.fluid.*;
 import net.fabricmc.fabric.api.transfer.v1.fluid.*;

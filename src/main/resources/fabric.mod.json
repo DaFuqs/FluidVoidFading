@@ -1,29 +1,29 @@
 {
   "schemaVersion": 1,
-  "id": "liquidvoidrenderer",
+  "id": "fluidvoidfading",
   "version": "${version}",
-  "name": "Liquid Void Renderer",
+  "name": "Fluid Void Fading",
   "description": "Renders fluids flowing into the void, seamlessly",
   "authors": [
     "DaFuqs"
   ],
   "contact": {
-    "website": "https://github.com/DaFuqs/LiquidVoidRenderer",
-    "repo": "https://github.com/DaFuqs/LiquidVoidRenderer"
+    "website": "https://github.com/DaFuqs/FluidVoidFading",
+    "repo": "https://github.com/DaFuqs/FluidVoidFading"
   },
   "license": "LGPLv3",
-  "icon": "assets/liquidvoidrenderer/icon.png",
+  "icon": "assets/fluidvoidfading/icon.png",
   "environment": "client",
   "entrypoints": {
     "client": [
-      "de.dafuqs.liquidvoidrenderer.LiquidVoidRendererClient"
+      "de.dafuqs.fluidvoidfading.FluidVoidFadingClient"
     ],
     "modmenu": [
-      "de.dafuqs.liquidvoidrenderer.config.ModMenuConfig"
+      "de.dafuqs.fluidvoidfading.config.ModMenuConfig"
     ]
   },
   "mixins": [
-    "liquidvoidrenderer.mixins.json"
+    "fluidvoidfading.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=0.11.3",

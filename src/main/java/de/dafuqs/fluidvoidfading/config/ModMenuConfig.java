@@ -1,4 +1,4 @@
-package de.dafuqs.liquidvoidrenderer.config;
+package de.dafuqs.fluidvoidfading.config;
 
 import com.terraformersmc.modmenu.api.*;
 import me.shedaniel.autoconfig.*;

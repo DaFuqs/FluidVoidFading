@@ -1,6 +1,6 @@
-package de.dafuqs.liquidvoidrenderer;
+package de.dafuqs.fluidvoidfading;
 
-import de.dafuqs.liquidvoidrenderer.config.*;
+import de.dafuqs.fluidvoidfading.config.*;
 import me.shedaniel.autoconfig.*;
 import me.shedaniel.autoconfig.serializer.*;
 import net.fabricmc.api.ClientModInitializer;
@@ -13,7 +13,7 @@ import net.minecraft.util.*;
 import net.minecraft.util.registry.*;
 
 @Environment(EnvType.CLIENT)
-public class LiquidVoidRendererClient implements ClientModInitializer {
+public class FluidVoidFadingClient implements ClientModInitializer {
 
     public static Config CONFIG;
 
