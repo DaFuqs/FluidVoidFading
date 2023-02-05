@@ -9,12 +9,14 @@ import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.*;
 import net.minecraft.client.render.*;
 import net.minecraft.fluid.*;
+import net.minecraft.registry.*;
 import net.minecraft.util.*;
-import net.minecraft.util.registry.*;
+import org.apache.logging.log4j.*;
 
 @Environment(EnvType.CLIENT)
 public class FluidVoidFadingClient implements ClientModInitializer {
 
+    private static final Logger LOGGER = LogManager.getLogger();
     public static Config CONFIG;
 
     @Override
@@ -23,9 +25,13 @@ public class FluidVoidFadingClient implements ClientModInitializer {
         CONFIG = AutoConfig.getConfigHolder(Config.class).getConfig();
 
         for(String additionalTransparentFluidString : CONFIG.AdditionalTransparentFluids) {
-            Identifier identifier = Identifier.tryParse(additionalTransparentFluidString);
-            Fluid fluid = Registry.FLUID.get(identifier);
-            BlockRenderLayerMap.INSTANCE.putFluid(fluid, RenderLayer.getTranslucent());
+            try {
+                Identifier identifier = Identifier.tryParse(additionalTransparentFluidString);
+                Fluid fluid = Registries.FLUID.get(identifier);
+                BlockRenderLayerMap.INSTANCE.putFluid(fluid, RenderLayer.getTranslucent());
+            } catch (Exception e) {
+                LOGGER.log(Level.ERROR, "Could not find fluid '" + additionalTransparentFluidString + "' and make it transparent.");
+            }
         }
 
     }
