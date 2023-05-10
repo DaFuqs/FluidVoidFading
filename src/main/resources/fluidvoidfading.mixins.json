@@ -2,10 +2,12 @@
   "required": true,
   "minVersion": "0.8",
   "package": "de.dafuqs.fluidvoidfading.mixin",
+  "plugin": "de.dafuqs.fluidvoidfading.mixin.Plugin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [],
   "client": [
-    "client.FluidRendererMixin"
+    "client.FluidRendererMixin",
+    "client.SodiumFluidRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1
