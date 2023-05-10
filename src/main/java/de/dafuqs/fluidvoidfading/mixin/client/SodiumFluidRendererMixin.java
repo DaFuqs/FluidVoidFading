@@ -6,6 +6,8 @@ import me.jellysquid.mods.sodium.client.model.quad.*;
 import me.jellysquid.mods.sodium.client.model.quad.blender.*;
 import me.jellysquid.mods.sodium.client.model.quad.properties.*;
 import me.jellysquid.mods.sodium.client.render.chunk.compile.buffers.*;
+import me.jellysquid.mods.sodium.client.render.chunk.compile.pipeline.*;
+import me.jellysquid.mods.sodium.client.render.vertex.type.*;
 import me.jellysquid.mods.sodium.client.util.color.*;
 import me.jellysquid.mods.sodium.common.util.*;
 import net.fabricmc.fabric.api.client.render.fluid.v1.*;
@@ -13,7 +15,7 @@ import net.minecraft.block.*;
 import net.minecraft.client.*;
 import net.minecraft.client.texture.*;
 import net.minecraft.fluid.*;
-import net.minecraft.tag.*;
+import net.minecraft.registry.tag.*;
 import net.minecraft.util.math.*;
 import net.minecraft.world.*;
 import org.jetbrains.annotations.*;
@@ -21,17 +23,11 @@ import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.*;
 
-import java.awt.*;
-
 @Pseudo
-@Mixin(me.jellysquid.mods.sodium.client.render.pipeline.FluidRenderer.class)
+@Mixin(FluidRenderer.class)
 public abstract class SodiumFluidRendererMixin {
     
-    @Shadow protected abstract void setVertex(ModelQuadViewMutable quad, int i, float x, float y, float z, float u, float v);
-    
     @Shadow @Final private BlockPos.Mutable scratchPos;
-    
-    @Shadow protected abstract int writeVertices(ChunkModelBuilder builder, BlockPos offset, ModelQuadView quad);
     
     @Shadow protected abstract ColorSampler<FluidState> createColorProviderAdapter(FluidRenderHandler handler);
     
@@ -44,6 +40,16 @@ public abstract class SodiumFluidRendererMixin {
     @Shadow @Final private int[] quadColors;
     
     @Shadow @Final private ColorBlender colorBlender;
+    
+    @Shadow
+    private static void setVertex(ModelQuadViewMutable quad, int i, float x, float y, float z, float u, float v) {
+    }
+    
+    @Shadow protected abstract void updateQuad(ModelQuadView quad, BlockRenderView world, BlockPos pos, LightPipeline lighter, Direction dir, float brightness, ColorSampler<FluidState> colorSampler, FluidState fluidState);
+    
+    @Shadow protected abstract void writeQuad(ChunkModelBuilder builder, BlockPos offset, ModelQuadView quad, ModelQuadFacing facing, ModelQuadWinding winding);
+    
+    @Shadow @Final private ChunkVertexEncoder.Vertex[] vertices;
     
     @Inject(method = "render", at = @At("HEAD"))
     public void render(BlockRenderView world, FluidState fluidState, BlockPos pos, BlockPos offset, ChunkModelBuilder buffers, CallbackInfoReturnable<Boolean> cir) {
@@ -182,29 +188,28 @@ public abstract class SodiumFluidRendererMixin {
                 float v2 = sprite.getFrameV(((1.0F - c2) * 16.0F * 0.5F));
                 float v3 = sprite.getFrameV(8.0);
                 quad.setSprite(sprite);
-                this.setVertex(quad, 0, x2, c2, z2, u2, v2);
-                this.setVertex(quad, 1, x2, yOffset, z2, u2, v3);
-                this.setVertex(quad, 2, x1, yOffset, z1, u1, v3);
-                this.setVertex(quad, 3, x1, c1, z1, u1, v1);
+                setVertex(quad, 0, x2, c2, z2, u2, v2);
+                setVertex(quad, 1, x2, yOffset, z2, u2, v3);
+                setVertex(quad, 2, x1, yOffset, z1, u1, v3);
+                setVertex(quad, 3, x1, c1, z1, u1, v1);
                 float br = dir.getAxis() == Direction.Axis.Z ? 0.8F : 0.6F;
                 ModelQuadFacing facing = ModelQuadFacing.fromDirection(dir);
                 
                 int[] previousQuadColors = this.quadColors;
-                lighter.calculate(quad, pos, this.quadLightData, null, dir, false);
+                QuadLightData light = this.quadLightData;
+                lighter.calculate(quad, pos, light, null, dir, false);
                 int[] biomeColors = this.colorBlender.getColors(world, pos, quad, colorizer, fluidState);
-                
-                calculateAlphaQuadColors(biomeColors, br, 1.0F, 0.3F);
-                int vertexStart = this.writeVertices(buffers, offset.offset(Direction.DOWN, 1), quad);
-                buffers.getIndexBufferBuilder(facing).add(vertexStart, ModelQuadWinding.CLOCKWISE);
+
+                this.calculateAlphaQuadColors(biomeColors, br, 1.0F, 0.3F);
+                this.writeQuad(buffers, offset.offset(Direction.DOWN, 1), quad, facing, ModelQuadWinding.CLOCKWISE);
                 if (!isOverlay) {
-                    buffers.getIndexBufferBuilder(facing.getOpposite()).add(vertexStart, ModelQuadWinding.COUNTERCLOCKWISE);
+                    this.writeQuad(buffers, offset.offset(Direction.DOWN, 1), quad, facing.getOpposite(), ModelQuadWinding.COUNTERCLOCKWISE);
                 }
 
-                calculateAlphaQuadColors(biomeColors, br, 0.3F, 0.0F);
-                vertexStart = this.writeVertices(buffers, offset.offset(Direction.DOWN, 2), quad);
-                buffers.getIndexBufferBuilder(facing).add(vertexStart, ModelQuadWinding.CLOCKWISE);
+                this.calculateAlphaQuadColors(biomeColors, br, 0.3F, 0.0F);
+                this.writeQuad(buffers, offset.offset(Direction.DOWN, 2), quad, facing, ModelQuadWinding.CLOCKWISE);
                 if (!isOverlay) {
-                    buffers.getIndexBufferBuilder(facing.getOpposite()).add(vertexStart, ModelQuadWinding.COUNTERCLOCKWISE);
+                    this.writeQuad(buffers, offset.offset(Direction.DOWN, 2), quad, facing.getOpposite(), ModelQuadWinding.COUNTERCLOCKWISE);
                 }
                 
                 this.quadColors[0] = previousQuadColors[0];
