@@ -1,5 +1,5 @@
 plugins {
-    id 'fabric-loom' version '1.1-SNAPSHOT'
+    id 'fabric-loom' version '1.2-SNAPSHOT'
     id 'maven-publish'
 }
 
@@ -38,7 +38,7 @@ dependencies {
     }
     modApi("com.terraformersmc:modmenu:${project.modmenu_version}")
 
-    modImplementation "maven.modrinth:sodium:mc1.19.3-0.4.9"
+    modImplementation "maven.modrinth:sodium:${project.sodium_version}"
 }
 
 processResources {
