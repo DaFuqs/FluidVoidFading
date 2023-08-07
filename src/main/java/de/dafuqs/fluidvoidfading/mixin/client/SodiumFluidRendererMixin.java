@@ -1,15 +1,17 @@
 package de.dafuqs.fluidvoidfading.mixin.client;
 
+import me.jellysquid.mods.sodium.client.model.color.*;
 import me.jellysquid.mods.sodium.client.model.light.*;
 import me.jellysquid.mods.sodium.client.model.light.data.*;
 import me.jellysquid.mods.sodium.client.model.quad.*;
-import me.jellysquid.mods.sodium.client.model.quad.blender.*;
 import me.jellysquid.mods.sodium.client.model.quad.properties.*;
+import me.jellysquid.mods.sodium.client.render.chunk.compile.*;
 import me.jellysquid.mods.sodium.client.render.chunk.compile.buffers.*;
 import me.jellysquid.mods.sodium.client.render.chunk.compile.pipeline.*;
-import me.jellysquid.mods.sodium.client.render.vertex.type.*;
-import me.jellysquid.mods.sodium.client.util.color.*;
-import me.jellysquid.mods.sodium.common.util.*;
+import me.jellysquid.mods.sodium.client.render.chunk.terrain.material.*;
+import me.jellysquid.mods.sodium.client.util.*;
+import me.jellysquid.mods.sodium.client.world.*;
+import net.caffeinemc.mods.sodium.api.util.*;
 import net.fabricmc.fabric.api.client.render.fluid.v1.*;
 import net.minecraft.block.*;
 import net.minecraft.client.*;
@@ -24,12 +26,12 @@ import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.*;
 
 @Pseudo
-@Mixin(FluidRenderer.class)
+@Mixin(value = FluidRenderer.class, remap = false)
 public abstract class SodiumFluidRendererMixin {
     
     @Shadow @Final private BlockPos.Mutable scratchPos;
     
-    @Shadow protected abstract ColorSampler<FluidState> createColorProviderAdapter(FluidRenderHandler handler);
+    @Shadow protected abstract ColorProvider<FluidState> getColorProvider(Fluid fluid, FluidRenderHandler handler);
     
     @Shadow @Final private ModelQuadViewMutable quad;
     
@@ -39,46 +41,42 @@ public abstract class SodiumFluidRendererMixin {
     
     @Shadow @Final private int[] quadColors;
     
-    @Shadow @Final private ColorBlender colorBlender;
-    
     @Shadow
     private static void setVertex(ModelQuadViewMutable quad, int i, float x, float y, float z, float u, float v) {
     }
     
-    @Shadow protected abstract void updateQuad(ModelQuadView quad, BlockRenderView world, BlockPos pos, LightPipeline lighter, Direction dir, float brightness, ColorSampler<FluidState> colorSampler, FluidState fluidState);
-    
-    @Shadow protected abstract void writeQuad(ChunkModelBuilder builder, BlockPos offset, ModelQuadView quad, ModelQuadFacing facing, ModelQuadWinding winding);
-    
-    @Shadow @Final private ChunkVertexEncoder.Vertex[] vertices;
+    @Shadow protected abstract void writeQuad(ChunkModelBuilder builder, Material material, BlockPos offset, ModelQuadView quad, ModelQuadFacing facing, boolean flip);
     
     @Inject(method = "render", at = @At("HEAD"))
-    public void render(BlockRenderView world, FluidState fluidState, BlockPos pos, BlockPos offset, ChunkModelBuilder buffers, CallbackInfoReturnable<Boolean> cir) {
+    public void render(WorldSlice world, FluidState fluidState, BlockPos pos, BlockPos offset, ChunkBuildBuffers buffers, CallbackInfo cir) {
         if (pos.getY() == world.getBottomY()) {
             renderFluidInVoid(world, fluidState, pos, offset, buffers);
         }
     }
 
-    @Inject(method = "isSideExposed(Lnet/minecraft/world/BlockRenderView;IIILnet/minecraft/util/math/Direction;F)Z", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "isSideExposed", at = @At("HEAD"), cancellable = true)
     private void isSideExposed(BlockRenderView world, int x, int y, int z, Direction dir, float height, CallbackInfoReturnable<Boolean> cir) {
         if (dir == Direction.DOWN && y == world.getBottomY()) {
             cir.setReturnValue(false);
         }
     }
     
-    private void renderFluidInVoid(BlockRenderView world, @NotNull FluidState fluidState, BlockPos pos, BlockPos offset, ChunkModelBuilder buffers) {
+    private void renderFluidInVoid(WorldSlice world, @NotNull FluidState fluidState, BlockPos blockPos, BlockPos offset, ChunkBuildBuffers buffers) {
         Fluid fluid = fluidState.getFluid();
+        Material material = DefaultMaterials.forFluidState(fluidState);
+        ChunkModelBuilder meshBuilder = buffers.get(material);
         if (fluid != Fluids.EMPTY) {
-            int posX = pos.getX();
-            int posY = pos.getY();
-            int posZ = pos.getZ();
+            int posX = blockPos.getX();
+            int posY = blockPos.getY();
+            int posZ = blockPos.getZ();
             
-            BlockState northBlockState = world.getBlockState(pos.offset(Direction.NORTH));
+            BlockState northBlockState = world.getBlockState(blockPos.offset(Direction.NORTH));
             FluidState northFluidState = northBlockState.getFluidState();
-            BlockState southBlockState = world.getBlockState(pos.offset(Direction.SOUTH));
+            BlockState southBlockState = world.getBlockState(blockPos.offset(Direction.SOUTH));
             FluidState southFluidState = southBlockState.getFluidState();
-            BlockState westBlockState = world.getBlockState(pos.offset(Direction.WEST));
+            BlockState westBlockState = world.getBlockState(blockPos.offset(Direction.WEST));
             FluidState westFluidState = westBlockState.getFluidState();
-            BlockState eastBlockState = world.getBlockState(pos.offset(Direction.EAST));
+            BlockState eastBlockState = world.getBlockState(blockPos.offset(Direction.EAST));
             FluidState eastFluidState = eastBlockState.getFluidState();
             
             boolean sfNorth = northFluidState.getFluid().matchesType(fluidState.getFluid());
@@ -93,17 +91,17 @@ public abstract class SodiumFluidRendererMixin {
                 handler = FluidRenderHandlerRegistry.INSTANCE.get(isLava ? Fluids.LAVA : Fluids.WATER);
             }
             
-            ColorSampler<FluidState> colorizer = this.createColorProviderAdapter(handler);
-            Sprite[] sprites = handler.getFluidSprites(world, pos, fluidState);
-            float h1;
-            float h2;
-            float h3;
-            float h4;
+            ColorProvider<FluidState> colorizer = this.getColorProvider(fluid, handler);
+            Sprite[] sprites = handler.getFluidSprites(world, blockPos, fluidState);
+            float northWestHeight;
+            float southWestHeight;
+            float southEastHeight;
+            float northEastHeight;
             float yOffset = 0.0F;
-            h1 = 1.0F;
-            h2 = 1.0F;
-            h3 = 1.0F;
-            h4 = 1.0F;
+            northWestHeight = 1.0F;
+            southWestHeight = 1.0F;
+            southEastHeight = 1.0F;
+            northEastHeight = 1.0F;
     
             ModelQuadViewMutable quad = this.quad;
             LightMode lightMode = isWater && MinecraftClient.isAmbientOcclusionEnabled() ? LightMode.SMOOTH : LightMode.FLAT;
@@ -123,8 +121,8 @@ public abstract class SodiumFluidRendererMixin {
                             continue;
                         }
                 
-                        c1 = h1;
-                        c2 = h4;
+                        c1 = northWestHeight;
+                        c2 = northEastHeight;
                         x1 = 0.0F;
                         x2 = 1.0F;
                         z1 = 0.001F;
@@ -135,8 +133,8 @@ public abstract class SodiumFluidRendererMixin {
                             continue;
                         }
                 
-                        c1 = h3;
-                        c2 = h2;
+                        c1 = southEastHeight;
+                        c2 = southWestHeight;
                         x1 = 1.0F;
                         x2 = 0.0F;
                         z1 = 0.999F;
@@ -147,8 +145,8 @@ public abstract class SodiumFluidRendererMixin {
                             continue;
                         }
                 
-                        c1 = h2;
-                        c2 = h1;
+                        c1 = southWestHeight;
+                        c2 = northWestHeight;
                         x1 = 0.001F;
                         x2 = x1;
                         z1 = 1.0F;
@@ -156,8 +154,8 @@ public abstract class SodiumFluidRendererMixin {
                         break;
                     case EAST:
                         if (!sfEast) {
-                            c1 = h4;
-                            c2 = h3;
+                            c1 = northEastHeight;
+                            c2 = southEastHeight;
                             x1 = 0.999F;
                             x2 = x1;
                             z1 = 0.0F;
@@ -196,20 +194,20 @@ public abstract class SodiumFluidRendererMixin {
                 ModelQuadFacing facing = ModelQuadFacing.fromDirection(dir);
                 
                 int[] previousQuadColors = this.quadColors;
-                QuadLightData light = this.quadLightData;
-                lighter.calculate(quad, pos, light, null, dir, false);
-                int[] biomeColors = this.colorBlender.getColors(world, pos, quad, colorizer, fluidState);
+                lighter.calculate(quad, blockPos, this.quadLightData, null, dir, false);
+                colorizer.getColors(world, blockPos, fluidState, quad, previousQuadColors);
+                int[] biomeColors = previousQuadColors;
 
                 this.calculateAlphaQuadColors(biomeColors, br, 1.0F, 0.3F);
-                this.writeQuad(buffers, offset.offset(Direction.DOWN, 1), quad, facing, ModelQuadWinding.CLOCKWISE);
+                this.writeQuad(meshBuilder, material, offset.offset(Direction.DOWN, 1), quad, facing, false);
                 if (!isOverlay) {
-                    this.writeQuad(buffers, offset.offset(Direction.DOWN, 1), quad, facing.getOpposite(), ModelQuadWinding.COUNTERCLOCKWISE);
+                    this.writeQuad(meshBuilder, material, offset.offset(Direction.DOWN, 1), quad, facing.getOpposite(), true);
                 }
 
                 this.calculateAlphaQuadColors(biomeColors, br, 0.3F, 0.0F);
-                this.writeQuad(buffers, offset.offset(Direction.DOWN, 2), quad, facing, ModelQuadWinding.CLOCKWISE);
+                this.writeQuad(meshBuilder, material, offset.offset(Direction.DOWN, 2), quad, facing, false);
                 if (!isOverlay) {
-                    this.writeQuad(buffers, offset.offset(Direction.DOWN, 2), quad, facing.getOpposite(), ModelQuadWinding.COUNTERCLOCKWISE);
+                    this.writeQuad(meshBuilder, material, offset.offset(Direction.DOWN, 2), quad, facing.getOpposite(), true);
                 }
                 
                 this.quadColors[0] = previousQuadColors[0];
@@ -222,7 +220,7 @@ public abstract class SodiumFluidRendererMixin {
     
     private void calculateAlphaQuadColors(int[] biomeColors, float brightness, float alpha1, float alpha2) {
         for(int i = 0; i < 4; ++i) {
-            this.quadColors[i] = ColorABGR.mul(biomeColors != null ? biomeColors[i] : -1, brightness);
+            this.quadColors[i] = ColorABGR.withAlpha(biomeColors != null ? biomeColors[i] : -1, brightness);
             float a = i == 0 || i == 3 ? alpha1 : alpha2;
             this.quadColors[i] = ColorABGR.pack(
                     ColorABGR.unpackRed(this.quadColors[i]) / 255F,
