@@ -27,7 +27,6 @@
   ],
   "depends": {
     "minecraft": ">=1.20.1",
-    "sodium": "~0.5.0",
     "fabricloader": "*",
     "cloth-config": "*",
     "fabric-api": "*"

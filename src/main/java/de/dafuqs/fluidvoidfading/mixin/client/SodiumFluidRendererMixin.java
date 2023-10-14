@@ -61,6 +61,7 @@ public abstract class SodiumFluidRendererMixin {
         }
     }
     
+    @Unique
     private void renderFluidInVoid(WorldSlice world, @NotNull FluidState fluidState, BlockPos blockPos, BlockPos offset, ChunkBuildBuffers buffers) {
         Fluid fluid = fluidState.getFluid();
         Material material = DefaultMaterials.forFluidState(fluidState);
@@ -218,6 +219,7 @@ public abstract class SodiumFluidRendererMixin {
         }
     }
     
+    @Unique
     private void calculateAlphaQuadColors(int[] biomeColors, float brightness, float alpha1, float alpha2) {
         for(int i = 0; i < 4; ++i) {
             this.quadColors[i] = ColorABGR.withAlpha(biomeColors != null ? biomeColors[i] : -1, brightness);
