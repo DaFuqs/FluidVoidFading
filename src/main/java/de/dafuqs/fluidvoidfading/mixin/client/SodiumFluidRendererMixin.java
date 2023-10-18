@@ -181,11 +181,11 @@ public abstract class SodiumFluidRendererMixin {
                     }
                 }
         
-                u1 = sprite.getFrameU(0.0);
-                float u2 = sprite.getFrameU(8.0);
-                float v1 = sprite.getFrameV(((1.0F - c1) * 16.0F * 0.5F));
-                float v2 = sprite.getFrameV(((1.0F - c2) * 16.0F * 0.5F));
-                float v3 = sprite.getFrameV(8.0);
+                u1 = sprite.getFrameU(0.F);
+                float u2 = sprite.getFrameU(0.5F);
+                float v1 = sprite.getFrameV((1.0F - c1) * 0.5F);
+                float v2 = sprite.getFrameV((1.0F - c2) * 0.5F);
+                float v3 = sprite.getFrameV(0.5F);
                 quad.setSprite(sprite);
                 setVertex(quad, 0, x2, c2, z2, u2, v2);
                 setVertex(quad, 1, x2, yOffset, z2, u2, v3);

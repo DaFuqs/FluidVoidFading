@@ -93,13 +93,13 @@ public abstract class FluidRendererMixin {
             float alpha2 = 0.3F * (colors[0] / 255F);
             float alpha3 = 0.0F;
 
-            for (int i = 0; i < 4; ++i) { // directions
+            for (Direction direction : Direction.Type.HORIZONTAL) { // directions
                 double x1;
                 double z1;
                 double x2;
                 double z2;
                 boolean shouldRender;
-                if (i == 0) {
+                if (direction == Direction.NORTH) {
                     ca = n;
                     cb = q;
                     x1 = d;
@@ -107,14 +107,14 @@ public abstract class FluidRendererMixin {
                     z1 = r + 0.0010000000474974513D;
                     z2 = r + 0.0010000000474974513D;
                     shouldRender = sameFluidNorth;
-                } else if (i == 1) {
+                } else if (direction == Direction.SOUTH) {
                     cb = o;
                     x1 = d + 1.0D;
                     x2 = d;
                     z1 = r + 1.0D - 0.0010000000474974513D;
                     z2 = r + 1.0D - 0.0010000000474974513D;
                     shouldRender = sameFluidSouth;
-                } else if (i == 2) {
+                } else if (direction == Direction.WEST) {
                     ca = o;
                     cb = n;
                     x1 = d + 0.0010000000474974513D;
@@ -133,12 +133,13 @@ public abstract class FluidRendererMixin {
                 }
 
                 if (!shouldRender) {
-                    u1 = sprite.getFrameU(0.0D);
-                    u2 = sprite.getFrameU(8.0D);
-                    float v1 = sprite.getFrameV(((1.0F - ca) * 16.0F * 0.5F));
-                    float v2 = sprite.getFrameV(((1.0F - cb) * 16.0F * 0.5F));
-                    float v3 = sprite.getFrameV(8.0D);
-                    float sidedBrightness = i < 2 ? brightnessNorth : brightnessWest;
+                    u1 = sprite.getFrameU(0.F);
+                    u2 = sprite.getFrameU(0.5F);
+                    float v1 = sprite.getFrameV((1.0F - ca) * 0.5F);
+                    float v2 = sprite.getFrameV((1.0F - cb) * 0.5F);
+                    float v3 = sprite.getFrameV(0.5F);
+                    
+                    float sidedBrightness = direction.getAxis() == Direction.Axis.Z ? brightnessNorth : brightnessWest;
                     float red = brightnessUp * sidedBrightness * redF;
                     float green = brightnessUp * sidedBrightness * greenF;
                     float blue = brightnessUp * sidedBrightness * blueF;

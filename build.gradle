@@ -38,7 +38,7 @@ dependencies {
     }
     modApi("com.terraformersmc:modmenu:${project.modmenu_version}")
 
-    modImplementation "maven.modrinth:sodium:${project.sodium_version}"
+    modCompileOnly("maven.modrinth:sodium:${project.sodium_version}")
 }
 
 processResources {
