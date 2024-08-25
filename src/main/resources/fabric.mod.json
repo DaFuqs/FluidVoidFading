@@ -32,6 +32,6 @@
     "cloth-config": "*"
   },
   "breaks": {
-    "sodium": "*"
+    "sodium": "<0.5.9999"
   }
 }
