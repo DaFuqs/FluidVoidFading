@@ -6,7 +6,7 @@ import me.shedaniel.autoconfig.serializer.*;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.blockrenderlayer.v1.*;
+import net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap;
 import net.minecraft.client.render.*;
 import net.minecraft.fluid.*;
 import net.minecraft.registry.*;
@@ -28,7 +28,7 @@ public class FluidVoidFadingClient implements ClientModInitializer {
             try {
                 Identifier identifier = Identifier.tryParse(additionalTransparentFluidString);
                 Fluid fluid = Registries.FLUID.get(identifier);
-                BlockRenderLayerMap.INSTANCE.putFluid(fluid, RenderLayer.getTranslucent());
+                BlockRenderLayerMap.putFluid(fluid, BlockRenderLayer.TRANSLUCENT);
             } catch (Exception e) {
                 LOGGER.log(Level.ERROR, "Could not find fluid '" + additionalTransparentFluidString + "' and make it transparent.");
             }
