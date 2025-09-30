@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${version}",
+  "name": "${display_name}",
+  "description": "${description}",
+  "authors": [
+    "DaFuqs",
+    "AnAwesomGuy (multiloader port)"
+  ],
+  "contact": {
+    "sources": "https://github.com/DaFuqs/FluidVoidFading",
+    "issues": "https://github.com/DaFuqs/FluidVoidFading/issues"
+  },
+  "license": "GPL-3.0-or-later",
+  "icon": "assets/${mod_id}/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "de.dafuqs.fluidvoidfading.fabric.FluidVoidFadingImpl"
+    ]
+  },
+  "mixins": [
+    {
+      "config": "${mod_id}.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "minecraft": ">=1.20",
+    "fabricloader": ">=0.15",
+    "fabric-renderer-api-v1": "*"
+  }
+}
