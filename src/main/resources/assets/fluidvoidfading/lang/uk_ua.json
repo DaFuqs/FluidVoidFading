@@ -1,5 +1,0 @@
-{
-  "text.autoconfig.FluidVoidFading.title": "Налаштування Fluid Void Fading",
-  "text.autoconfig.FluidVoidFading.option.AdditionalTransparentFluids": "Рідина, яка буде поступово прозорішати в порожнечі",
-  "modmenu.descriptionTranslation.fluidvoidfading": "Промальовує рідини, що плавно стікають у порожнечу"
-}

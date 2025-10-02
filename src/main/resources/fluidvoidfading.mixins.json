@@ -4,12 +4,11 @@
   "package": "de.dafuqs.fluidvoidfading.mixin",
   "plugin": "de.dafuqs.fluidvoidfading.mixin.Plugin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": [],
-  "client": [
-    "client.FluidRendererMixin",
-    "client.SodiumFluidRendererMixin"
-  ],
   "injectors": {
     "defaultRequire": 1
-  }
+  },
+  "client": [
+    "client.LiquidBlockRendererMixin",
+    "client.SodiumDefaultFluidRendererMixin"
+  ]
 }
