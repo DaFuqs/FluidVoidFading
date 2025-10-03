@@ -31,5 +31,7 @@
     "fabric-api": "*",
     "cloth-config": "*"
   },
-  "breaks": { }
+  "breaks": {
+    "sodium": "<0.7.0"
+  }
 }

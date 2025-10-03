@@ -132,7 +132,7 @@ public abstract class SodiumFluidRendererMixin {
             ModelQuadFacing facing = ModelQuadFacing.fromDirection(dir);
 
             lighter.calculate(quad, blockPos, this.quadLightData, null, dir, false, false);
-            colorProvider.getColors(level, blockPos, this.scratchPos, fluidState, quad, this.quadColors);
+            colorProvider.getColors(level, blockPos, this.scratchPos, fluidState, quad, this.quadColors, level.hasBiomeBlend());
 
             int[] original = new int[]{ColorARGB.toABGR(this.quadColors[0]), ColorARGB.toABGR(this.quadColors[1]),
                                        ColorARGB.toABGR(this.quadColors[2]), ColorARGB.toABGR(this.quadColors[3])};
