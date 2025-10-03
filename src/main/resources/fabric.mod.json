@@ -29,8 +29,9 @@
     "minecraft": ">=${minecraft_version}",
     "fabricloader": "*",
     "fabric-api": "*",
-    "cloth-config": "*",
-    "sodium": ">=0.7.0"
+    "cloth-config": "*"
   },
-  "breaks": { }
+  "breaks": {
+    "sodium": "<0.7.0"
+  }
 }
