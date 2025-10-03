@@ -1,75 +1,98 @@
 plugins {
-    id 'fabric-loom' version '1.11-SNAPSHOT'
-    id 'maven-publish'
+    id 'dev.architectury.loom' version '1.11-SNAPSHOT' apply false
+    id 'architectury-plugin' version '3.4-SNAPSHOT'
+    id 'com.gradleup.shadow' version '8.3.+' apply false
 }
 
-base {
-    archivesName = project.archives_base_name
+architectury {
+    minecraft = project.minecraft_version
 }
 
-version = project.mod_version
-group = project.maven_group
+allprojects {
+    version = rootProject.mod_version
+    group = rootProject.maven_group
+}
 
-repositories {
-    maven { url "https://maven.shedaniel.me/" }
-    maven { url "https://maven.terraformersmc.com" }
+subprojects {
+    apply plugin: 'dev.architectury.loom'
+    apply plugin: 'architectury-plugin'
+    apply plugin: 'maven-publish'
 
-    exclusiveContent {
-        forRepository {
-            maven {
-                name = "Modrinth"
-                url = "https://api.modrinth.com/maven"
+    base {
+        archivesName = "$rootProject.mod_id-$project.name"
+    }
+
+    loom {
+        runs {
+            client {
+                property 'mixin.debug.export', 'true'
             }
         }
-        filter {
-            includeGroup "maven.modrinth"
+    }
+
+    repositories {
+        maven { url "https://maven.shedaniel.me/" }
+        maven { url "https://maven.terraformersmc.com" }
+
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = "Modrinth"
+                    url = "https://api.modrinth.com/maven"
+                }
+            }
+            filter {
+                includeGroup "maven.modrinth"
+            }
         }
     }
-}
 
-dependencies {
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-
-    modApi("me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}") {
-        exclude(group: "net.fabricmc.fabric-api")
+    dependencies {
+        minecraft "net.minecraft:minecraft:$rootProject.minecraft_version"
+        mappings loom.layered {
+            it.mappings("net.fabricmc:yarn:$rootProject.yarn_mappings:v2")
+            it.mappings("dev.architectury:yarn-mappings-patch-neoforge:$rootProject.yarn_mappings_patch_neoforge_version")
+        }
     }
-    modApi("com.terraformersmc:modmenu:${project.modmenu_version}")
 
-    // Switch to modImplementation for testing if the Sodium Compat works
-    modCompileOnly("maven.modrinth:sodium:${project.sodium_version}")
-    // modImplementation("maven.modrinth:sodium:${project.sodium_version}")
-}
-
-processResources {
-    inputs.property "version", project.version
-    inputs.property "minecraft_version", project.minecraft_version
-    inputs.property "loader_version", project.loader_version
-    filteringCharset "UTF-8"
-
-    filesMatching("fabric.mod.json") {
-        expand "version": project.version,
-                "minecraft_version": project.minecraft_version,
-                "loader_version": project.loader_version
+    java {
+        withSourcesJar()
+        sourceCompatibility = targetCompatibility = JavaVersion.VERSION_21
     }
-}
 
-// ensure that the encoding is set to UTF-8, no matter what the system default is
-// this fixes some edge cases with special characters not displaying correctly
-// see http://yodaconditions.net/blog/fix-for-java-file-encoding-problems-with-gradle.html
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = "UTF-8"
-    it.options.release = 21
-}
+    tasks.withType(JavaCompile).configureEach {
+        it.options.release = 21
+    }
 
-java {
-    withSourcesJar()
-}
+    jar {
+        from("LICENSE") {
+            rename { "${it}_${rootProject.mod_id}" }
+        }
+    }
 
-jar {
-    from("LICENSE") {
-        rename { "${it}_${project.archives_base_name}" }
+    processResources {
+        def props = [
+                version: project.version, minecraft_version: project.minecraft_version,
+                description: project.mod_description, display_name: project.display_name, mod_id: project.mod_id
+        ]
+        inputs.properties props
+        filteringCharset "UTF-8"
+
+        filesMatching(["fabric.mod.json", "META-INF/neoforge.mods.toml"]) {
+            expand props
+        }
+    }
+
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                artifactId = base.archivesName.get()
+                from components.java
+            }
+        }
+
+        // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
+        repositories {
+        }
     }
 }
