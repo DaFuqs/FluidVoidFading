@@ -39,13 +39,6 @@ public abstract class FluidRendererMixin {
         return blockPos.getY() == world.getBottomY();
     }
 
-    /*@Inject(method = "Lnet/minecraft/client/render/block/FluidRenderer;isSideCovered(Lnet/minecraft/util/math/Direction;FLnet/minecraft/block/BlockState;)Z", at = @At("HEAD"), cancellable = true)
-    private static void fluidVoidFading$isSideCovered(Direction direction, float f, BlockState blockState, CallbackInfoReturnable<Boolean> cir) {
-        if (direction == Direction.DOWN && fluidVoidFading$isDirectlyAboveVoid(world, pos)) {
-            cir.setReturnValue(true);
-        }
-    }*/
-
     @Unique
     private void fluidVoidFading$renderFluidInVoid(BlockRenderView world, BlockPos pos, VertexConsumer vertexConsumer, FluidState fluidState) {
         Fluid fluid = fluidState.getFluid();
