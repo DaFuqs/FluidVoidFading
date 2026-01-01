@@ -32,9 +32,9 @@ public class FluidVoidFading {
                 .defineListAllowEmpty("additionalTransparentFluids", List.of("minecraft:flowing_lava"), () -> "", o -> {
                     if (o instanceof String)
                         try {
-                            ResourceLocation.parse((String) o);
+                            Identifier.parse((String) o);
                             return true;
-                        } catch (ResourceLocationException ignored) {
+                        } catch (IdentifierException ignored) {
                         }
                     return false;
                 });
@@ -48,7 +48,7 @@ public class FluidVoidFading {
     
     public static void clientStartup(FMLClientSetupEvent event) {
         for (String s : TRANSPARENT_FLUIDS.get()) {
-            ResourceLocation rl = ResourceLocation.parse(s);
+            Identifier rl = Identifier.parse(s);
             Fluid fluid = BuiltInRegistries.FLUID.getValue(rl);
             if (fluid == Fluids.EMPTY) {
                 LOGGER.error("Fluid '{}' not found!", s);
