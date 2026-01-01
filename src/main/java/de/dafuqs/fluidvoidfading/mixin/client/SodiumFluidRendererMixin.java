@@ -1,4 +1,5 @@
 package de.dafuqs.fluidvoidfading.mixin.client;
+
 import net.caffeinemc.mods.sodium.api.util.*;
 import net.caffeinemc.mods.sodium.client.util.*;
 import net.caffeinemc.mods.sodium.client.world.*;
@@ -12,13 +13,16 @@ import net.caffeinemc.mods.sodium.client.render.chunk.compile.buffers.*;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.pipeline.*;
 import net.caffeinemc.mods.sodium.client.render.chunk.terrain.material.*;
 import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.*;
-import net.minecraft.block.*;
 import net.minecraft.client.*;
-import net.minecraft.client.texture.*;
-import net.minecraft.fluid.*;
-import net.minecraft.registry.tag.*;
-import net.minecraft.util.math.*;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.*;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.*;
+import net.minecraft.world.level.*;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.*;
@@ -27,7 +31,7 @@ import org.spongepowered.asm.mixin.injection.callback.*;
 @Mixin(value = DefaultFluidRenderer.class, remap = false)
 public abstract class SodiumFluidRendererMixin {
     
-    @Shadow @Final private BlockPos.Mutable scratchPos;
+    @Shadow @Final private BlockPos.MutableBlockPos scratchPos;
     
     @Shadow @Final private ModelQuadViewMutable quad;
     @Shadow @Final private int[] quadColors;
@@ -46,31 +50,31 @@ public abstract class SodiumFluidRendererMixin {
     @Shadow @Final private QuadLightData quadLightData;
 
     @Inject(method = "render", at = @At("RETURN"))
-    public void fluidVoidFading$render(LevelSlice level, BlockState blockState, FluidState fluidState, BlockPos blockPos, BlockPos offset, TranslucentGeometryCollector collector, ChunkModelBuilder meshBuilder, Material material, ColorProvider<FluidState> colorProvider, Sprite[] sprites, CallbackInfo ci) {
-        if (blockPos.getY() == level.getBottomY()) {
+    public void fluidVoidFading$render(LevelSlice level, BlockState blockState, FluidState fluidState, BlockPos blockPos, BlockPos offset, TranslucentGeometryCollector collector, ChunkModelBuilder meshBuilder, Material material, ColorProvider<FluidState> colorProvider, TextureAtlasSprite[] sprites, CallbackInfo ci) {
+        if (blockPos.getY() == level.getMinY()) {
             fluidVoidFading$renderFluidInVoid(level, fluidState, blockPos, offset, collector, meshBuilder, material, colorProvider, sprites);
         }
     }
 
     @Inject(method = "isSideExposed", at = @At("HEAD"), cancellable = true)
-    private void fluidVoidFading$isSideExposed(BlockRenderView world, int x, int y, int z, Direction dir, float height, CallbackInfoReturnable<Boolean> cir) {
-        if (dir == Direction.DOWN && y == world.getBottomY()) {
+    private void fluidVoidFading$isSideExposed(BlockAndTintGetter world, int x, int y, int z, Direction dir, float height, CallbackInfoReturnable<Boolean> cir) {
+        if (dir == Direction.DOWN && y == world.getMinY()) {
             cir.setReturnValue(false);
         }
     }
 
     @Unique
-    private void fluidVoidFading$renderFluidInVoid(LevelSlice level, FluidState fluidState, BlockPos blockPos, BlockPos offset, TranslucentGeometryCollector collector, ChunkModelBuilder meshBuilder, Material material, ColorProvider<FluidState> colorProvider, Sprite[] sprites) {
-        boolean isWater = fluidState.isIn(FluidTags.WATER);
+    private void fluidVoidFading$renderFluidInVoid(LevelSlice level, FluidState fluidState, BlockPos blockPos, BlockPos offset, TranslucentGeometryCollector collector, ChunkModelBuilder meshBuilder, Material material, ColorProvider<FluidState> colorProvider, TextureAtlasSprite[] sprites) {
+        boolean isWater = fluidState.is(FluidTags.WATER);
 
         final ModelQuadViewMutable quad = this.quad;
 
-        LightMode lightMode = isWater && MinecraftClient.isAmbientOcclusionEnabled() ? LightMode.SMOOTH : LightMode.FLAT;
+        LightMode lightMode = isWater && Minecraft.useAmbientOcclusion() ? LightMode.SMOOTH : LightMode.FLAT;
         LightPipeline lighter = this.lighters.getLighter(lightMode);
         
         quad.setFlags(ModelQuadFlags.IS_PARALLEL | ModelQuadFlags.IS_ALIGNED);
         for (Direction dir : DirectionUtil.HORIZONTAL_DIRECTIONS) {
-            BlockState adjBlock = level.getBlockState(this.scratchPos.set(blockPos, dir));
+            BlockState adjBlock = level.getBlockState(this.scratchPos.setWithOffset(blockPos, dir));
             if (!adjBlock.getFluidState().isEmpty()) continue;
             float x1;
             float z1;
@@ -107,7 +111,7 @@ public abstract class SodiumFluidRendererMixin {
                 }
             }
 
-            Sprite sprite = sprites[1];
+            TextureAtlasSprite sprite = sprites[1];
 
             boolean isOverlay = false;
 
@@ -116,10 +120,10 @@ public abstract class SodiumFluidRendererMixin {
                 isOverlay = true;
             }
 
-            float u1 = sprite.getFrameU(0.0F);
-            float u2 = sprite.getFrameU(0.5F);
-            float v1 = sprite.getFrameV(0.0F);
-            float v2 = sprite.getFrameV(0.5F);
+            float u1 = sprite.getU(0.0F);
+            float u2 = sprite.getU(0.5F);
+            float v1 = sprite.getV(0.0F);
+            float v2 = sprite.getV(0.5F);
 
             quad.setSprite(sprite);
 
@@ -137,14 +141,14 @@ public abstract class SodiumFluidRendererMixin {
             int[] original = new int[]{ColorARGB.toABGR(this.quadColors[0]), ColorARGB.toABGR(this.quadColors[1]),
                                        ColorARGB.toABGR(this.quadColors[2]), ColorARGB.toABGR(this.quadColors[3])};
 
-            BlockPos downPos1 = offset.offset(Direction.DOWN, 1);
+            BlockPos downPos1 = offset.relative(Direction.DOWN, 1);
             this.updateQuadWithAlpha(quad, facing, br, original, 1.0F, 0.3F);
             this.writeQuad(meshBuilder, collector, material, downPos1, quad, facing, false);
             if (!isOverlay) {
                 this.writeQuad(meshBuilder, collector, material, downPos1, quad, facing.getOpposite(), true);
             }
 
-            BlockPos downPos2 = offset.offset(Direction.DOWN, 2);
+            BlockPos downPos2 = offset.relative(Direction.DOWN, 2);
             this.updateQuadWithAlpha(quad, facing, br, original, 0.3F, 0.0F);
             this.writeQuad(meshBuilder, collector, material, downPos2, quad, facing, false);
             if (!isOverlay) {

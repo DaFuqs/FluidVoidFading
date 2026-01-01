@@ -6,7 +6,7 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [],
   "client": [
-    "client.FluidRendererMixin",
+    "client.LiquidBlockRendererMixin",
     "client.SodiumFluidRendererMixin"
   ],
   "injectors": {

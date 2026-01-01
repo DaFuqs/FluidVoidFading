@@ -1,29 +1,35 @@
 package de.dafuqs.fluidvoidfading.mixin.client;
 
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.fabricmc.fabric.api.transfer.v1.client.fluid.*;
 import net.fabricmc.fabric.api.transfer.v1.fluid.*;
-import net.minecraft.block.*;
-import net.minecraft.client.render.*;
-import net.minecraft.client.render.block.*;
-import net.minecraft.client.texture.*;
-import net.minecraft.fluid.*;
-import net.minecraft.util.math.*;
-import net.minecraft.world.*;
+import net.minecraft.client.renderer.block.*;
+import net.minecraft.client.renderer.texture.*;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.*;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.*;
 
-@Mixin(FluidRenderer.class)
-public abstract class FluidRendererMixin {
+@Mixin(LiquidBlockRenderer.class)
+public abstract class LiquidBlockRendererMixin {
 
     @Shadow
-    protected abstract int getLight(BlockRenderView world, BlockPos pos);
+    protected abstract int getLightColor(BlockAndTintGetter world, BlockPos pos);
+
+    @Final
+	@Shadow
+    private TextureAtlasSprite waterOverlay;
 
     @Shadow
-    private Sprite waterOverlaySprite;
-
-    @Shadow
-    private static boolean isSameFluid(FluidState a, FluidState b) {
+    private static boolean isNeighborSameFluid(FluidState a, FluidState b) {
         throw new AssertionError();
     }
 
@@ -33,33 +39,33 @@ public abstract class FluidRendererMixin {
             fluidVoidFading$renderFluidInVoid(world, pos, vertexConsumer, fluidState);
         }
     }
-
-    @Unique
-    private static boolean fluidVoidFading$isDirectlyAboveVoid(BlockView world, BlockPos blockPos) {
-        return blockPos.getY() == world.getBottomY();
+    
+    @ModifyVariable(method = "tesselate", at = @At("STORE"), ordinal = 2)
+    private boolean injected(boolean x, BlockAndTintGetter blockAndTintGetter, BlockPos blockPos, VertexConsumer vertexConsumer, BlockState blockState, FluidState fluidState) {
+        return fluidVoidFading$isDirectlyAboveVoid(blockAndTintGetter, blockPos) ? false : x;
     }
-
+    
     @Unique
-    private void fluidVoidFading$renderFluidInVoid(BlockRenderView world, BlockPos pos, VertexConsumer vertexConsumer, FluidState fluidState) {
-        Fluid fluid = fluidState.getFluid();
+    private void fluidVoidFading$renderFluidInVoid(BlockAndTintGetter world, BlockPos pos, VertexConsumer vertexConsumer, FluidState fluidState) {
+        Fluid fluid = fluidState.getType();
         if (fluid != Fluids.EMPTY) {
-            BlockState northBlockState = world.getBlockState(pos.offset(Direction.NORTH));
+            BlockState northBlockState = world.getBlockState(pos.relative(Direction.NORTH));
             FluidState northFluidState = northBlockState.getFluidState();
-            BlockState southBlockState = world.getBlockState(pos.offset(Direction.SOUTH));
+            BlockState southBlockState = world.getBlockState(pos.relative(Direction.SOUTH));
             FluidState southFluidState = southBlockState.getFluidState();
-            BlockState westBlockState = world.getBlockState(pos.offset(Direction.WEST));
+            BlockState westBlockState = world.getBlockState(pos.relative(Direction.WEST));
             FluidState westFluidState = westBlockState.getFluidState();
-            BlockState eastBlockState = world.getBlockState(pos.offset(Direction.EAST));
+            BlockState eastBlockState = world.getBlockState(pos.relative(Direction.EAST));
             FluidState eastFluidState = eastBlockState.getFluidState();
 
-            boolean sameFluidNorth = isSameFluid(fluidState, northFluidState);
-            boolean sameFluidSouth = isSameFluid(fluidState, southFluidState);
-            boolean sameFluidWest = isSameFluid(fluidState, westFluidState);
-            boolean sameFluidEast = isSameFluid(fluidState, eastFluidState);
+            boolean sameFluidNorth = isNeighborSameFluid(fluidState, northFluidState);
+            boolean sameFluidSouth = isNeighborSameFluid(fluidState, southFluidState);
+            boolean sameFluidWest = isNeighborSameFluid(fluidState, westFluidState);
+            boolean sameFluidEast = isNeighborSameFluid(fluidState, eastFluidState);
 
-            float brightnessUp = world.getBrightness(Direction.UP, true);
-            float brightnessNorth = world.getBrightness(Direction.NORTH, true);
-            float brightnessWest = world.getBrightness(Direction.WEST, true);
+            float brightnessUp = world.getShade(Direction.UP, true);
+            float brightnessNorth = world.getShade(Direction.NORTH, true);
+            float brightnessWest = world.getShade(Direction.WEST, true);
             float n = 1.0F;
             float o = 1.0F;
             float p = 1.0F;
@@ -73,10 +79,10 @@ public abstract class FluidRendererMixin {
             float u1;
             float u2;
 
-            int light = this.getLight(world, pos);
+            int light = this.getLightColor(world, pos);
 
             FluidVariant fluidVariant = FluidVariant.of(fluid);
-            Sprite sprite = FluidVariantRendering.getSprites(fluidVariant)[1];
+            TextureAtlasSprite sprite = FluidVariantRendering.getSprites(fluidVariant)[1];
             int color = FluidVariantRendering.getColor(fluidVariant, world, pos);
             int[] colors = unpackColor(color);
 
@@ -88,7 +94,7 @@ public abstract class FluidRendererMixin {
             float alpha2 = 0.3F * (colors[0] / 255F);
             float alpha3 = 0.0F;
 
-            for (Direction direction : Direction.Type.HORIZONTAL) { // directions
+            for (Direction direction : Direction.Plane.HORIZONTAL) { // directions
                 float x1;
                 float z1;
                 float x2;
@@ -128,11 +134,11 @@ public abstract class FluidRendererMixin {
                 }
 
                 if (!shouldRender) {
-                    u1 = sprite.getFrameU(0.F);
-                    u2 = sprite.getFrameU(0.5F);
-                    float v1 = sprite.getFrameV((1.0F - ca) * 0.5F);
-                    float v2 = sprite.getFrameV((1.0F - cb) * 0.5F);
-                    float v3 = sprite.getFrameV(0.5F);
+                    u1 = sprite.getU(0.F);
+                    u2 = sprite.getU(0.5F);
+                    float v1 = sprite.getV((1.0F - ca) * 0.5F);
+                    float v2 = sprite.getV((1.0F - cb) * 0.5F);
+                    float v3 = sprite.getV(0.5F);
                     
                     float sidedBrightness = direction.getAxis() == Direction.Axis.Z ? brightnessNorth : brightnessWest;
                     float red = brightnessUp * sidedBrightness * redF;
@@ -147,7 +153,7 @@ public abstract class FluidRendererMixin {
                     vertex(vertexConsumer, x2, e + cb - 2, z2, red, green, blue, u2, v2, light, alpha2);
                     vertex(vertexConsumer, x2, e + t - 2, z2, red, green, blue, u2, v3, light, alpha3);
                     vertex(vertexConsumer, x1, e + t - 2, z1, red, green, blue, u1, v3, light, alpha3);
-                    if (sprite != this.waterOverlaySprite) {
+                    if (sprite != this.waterOverlay) {
                         vertex(vertexConsumer, x1, e + t - 1, z1, red, green, blue, u1, v3, light, alpha2);
                         vertex(vertexConsumer, x2, e + t - 1, z2, red, green, blue, u2, v3, light, alpha2);
                         vertex(vertexConsumer, x2, e + cb - 1, z2, red, green, blue, u2, v2, light, alpha1);
@@ -165,7 +171,7 @@ public abstract class FluidRendererMixin {
     }
     
     private void vertex(VertexConsumer vertexConsumer, float x, float y, float z, float red, float green, float blue, float u, float v, int light, float alpha) {
-        vertexConsumer.vertex(x, y, z).color(red, green, blue, alpha).texture(u, v).light(light).normal(0.0F, 1.0F, 0.0F);
+        vertexConsumer.addVertex(x, y, z).setColor(red, green, blue, alpha).setUv(u, v).setLight(light).setNormal(0.0F, 1.0F, 0.0F);
     }
     
     private static int[] unpackColor(int color) {
