@@ -20,12 +20,23 @@ public abstract class LiquidBlockRendererMixin {
         throw new AssertionError();
     }
 
-    @Shadow
+    @Final
+	@Shadow
     private TextureAtlasSprite waterOverlay;
 
     @Shadow
     protected abstract int getLightColor(BlockAndTintGetter level, BlockPos pos);
-
+    
+    @Unique
+    private static boolean fluidVoidFading$isDirectlyAboveVoid(BlockGetter world, BlockPos blockPos) {
+        return blockPos.getY() == world.getMinY();
+    }
+    
+    @ModifyVariable(method = "tesselate", at = @At("STORE"), name = "flag2")
+    private boolean injected(boolean x, BlockAndTintGetter blockAndTintGetter, BlockPos blockPos, VertexConsumer vertexConsumer, BlockState blockState, FluidState fluidState) {
+        return fluidVoidFading$isDirectlyAboveVoid(blockAndTintGetter, blockPos) ? false : x;
+    }
+    
     @Inject(method = "tesselate", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/block/LiquidBlockRenderer;isNeighborStateHidingOverlay(Lnet/minecraft/world/level/material/FluidState;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;)Z"))
     public void render(BlockAndTintGetter level, BlockPos pos, VertexConsumer consumer, BlockState blockState, FluidState fluidState, CallbackInfo ci,
                        @Local(ordinal = 0) int color, @Local TextureAtlasSprite[] sprites,
