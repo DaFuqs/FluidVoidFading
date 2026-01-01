@@ -32,9 +32,14 @@ public abstract class LiquidBlockRendererMixin {
     private static boolean isNeighborSameFluid(FluidState a, FluidState b) {
         throw new AssertionError();
     }
-
-    @Inject(method = "render", at = @At("HEAD"))
-    public void fluidVoidFading$render(BlockRenderView world, BlockPos pos, VertexConsumer vertexConsumer, BlockState blockState, FluidState fluidState, CallbackInfo ci) {
+    
+    @Unique
+    private static boolean fluidVoidFading$isDirectlyAboveVoid(BlockGetter world, BlockPos blockPos) {
+        return blockPos.getY() == world.getMinY();
+    }
+    
+    @Inject(method = "tesselate", at = @At("HEAD"))
+    public void fluidVoidFading$render(BlockAndTintGetter world, BlockPos pos, VertexConsumer vertexConsumer, BlockState blockState, FluidState fluidState, CallbackInfo ci) {
         if (fluidVoidFading$isDirectlyAboveVoid(world, pos)) {
             fluidVoidFading$renderFluidInVoid(world, pos, vertexConsumer, fluidState);
         }
