@@ -1,7 +1,7 @@
 plugins {
-    id 'idea'
+    id 'net.neoforged.gradle.userdev' version '7.1.21'
     id 'maven-publish'
-    id 'net.neoforged.gradle.userdev' version '7.1.12'
+    id 'idea'
 }
 
 version = mod_version
@@ -25,7 +25,7 @@ base {
     archivesName = archives_base_name
 }
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
 configurations {
     runtimeClasspath.extendsFrom localRuntime
@@ -66,7 +66,7 @@ runs {
 dependencies {
     implementation "net.neoforged:neoforge:${neoforge_version}"
 
-    sodium "net.caffeinemc:sodium-neoforge-mod:0.8.9-beta.3+mc1.21.11" // sodium compat
+    sodium "net.caffeinemc:sodium-neoforge-mod:0.8.9-beta.3+mc26.1" // sodium compat
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

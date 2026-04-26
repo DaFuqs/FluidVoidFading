@@ -53,7 +53,7 @@ public class FluidVoidFading {
             if (fluid == Fluids.EMPTY) {
                 LOGGER.error("Fluid '{}' not found!", s);
             } else {
-                ItemBlockRenderTypes.setRenderLayer(fluid, ChunkSectionLayer.TRANSLUCENT);
+                //ItemBlockRenderTypes.setRenderLayer(fluid, ChunkSectionLayer.TRANSLUCENT);
             }
         }
     }
