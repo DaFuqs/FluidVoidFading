@@ -158,10 +158,11 @@ public abstract class SodiumDefaultFluidRendererMixin {
         }
     }
 
-    @Inject(method = "isSideExposed", at = @At("HEAD"), cancellable = true)
-    private void fluidVoidFading$isSideExposed(BlockAndTintGetter world, int x, int y, int z, Direction dir, float height, CallbackInfoReturnable<Boolean> cir) {
-        if (dir == Direction.DOWN && y == world.getMinY())
+    @Inject(method = "isSideExposedOffset", at = @At("HEAD"), cancellable = true)
+    private void fluidVoidFading$isSideExposed(BlockAndTintGetter world, BlockState ownBlockState, BlockPos originPos, Direction dir, float height, CallbackInfoReturnable<Boolean> cir) {
+        if (dir == Direction.DOWN && originPos.getY() == world.getMinY()) {
             cir.setReturnValue(false);
+        }
     }
 
     @Unique

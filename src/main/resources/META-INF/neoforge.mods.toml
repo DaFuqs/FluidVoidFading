@@ -26,3 +26,11 @@ type = "required"
 versionRange = "${minecraft_version_range}"
 ordering = "NONE"
 side = "BOTH"
+
+[[dependencies."${mod_id}"]]
+modId="sodium"
+type="incompatible"
+reason="Breaking changes in Sodium fluid rendering"
+versionRange="(,0.8.7)"
+ordering="NONE"
+side="BOTH"
