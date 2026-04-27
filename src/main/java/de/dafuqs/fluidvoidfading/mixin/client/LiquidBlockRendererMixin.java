@@ -1,146 +1,196 @@
 package de.dafuqs.fluidvoidfading.mixin.client;
 
-import com.llamalad7.mixinextras.sugar.*;
-import com.mojang.blaze3d.vertex.*;
-import net.minecraft.client.renderer.block.*;
-import net.minecraft.client.renderer.texture.*;
-import net.minecraft.core.*;
-import net.minecraft.world.level.*;
-import net.minecraft.world.level.block.state.*;
-import net.minecraft.world.level.material.*;
-import org.spongepowered.asm.mixin.*;
-import org.spongepowered.asm.mixin.injection.*;
-import org.spongepowered.asm.mixin.injection.callback.*;
+import com.llamalad7.mixinextras.sugar.Local;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.caffeinemc.mods.sodium.api.util.ColorABGR;
+import net.caffeinemc.mods.sodium.api.util.ColorU8;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
+import net.minecraft.client.renderer.block.FluidModel;
+import net.minecraft.client.renderer.block.FluidRenderer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.util.ARGB;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.CardinalLighting;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(LiquidBlockRenderer.class)
+@Mixin(FluidRenderer.class)
 public abstract class LiquidBlockRendererMixin {
-    
+
     @Shadow
-    private static boolean isNeighborSameFluid(FluidState firstState, FluidState secondState) {
-        throw new AssertionError();
+    private static boolean isFaceOccludedByNeighbor(Direction direction, float height, BlockState neighborState) {
+        throw new UnsupportedOperationException("Implemented via mixin");
     }
 
-    @Final
-	@Shadow
-    private TextureAtlasSprite waterOverlay;
+    @Shadow
+    protected abstract void vertex(VertexConsumer builder, float x, float y, float z, int color, float u, float v, int lightCoords);
 
     @Shadow
-    protected abstract int getLightColor(BlockAndTintGetter level, BlockPos pos);
-    
+    protected abstract int getLightCoords(BlockAndTintGetter level, BlockPos pos);
+
     @Unique
     private static boolean fluidVoidFading$isDirectlyAboveVoid(BlockGetter world, BlockPos blockPos) {
         return blockPos.getY() == world.getMinY();
     }
-    
-    @ModifyVariable(method = "tesselate", at = @At("STORE"), name = "flag2")
-    private boolean injected(boolean x, BlockAndTintGetter blockAndTintGetter, BlockPos blockPos, VertexConsumer vertexConsumer, BlockState blockState, FluidState fluidState) {
-        return fluidVoidFading$isDirectlyAboveVoid(blockAndTintGetter, blockPos) ? false : x;
+
+    @ModifyVariable(method = "tesselate", at = @At(value = "STORE", ordinal = 0), name = "renderDown")
+    public boolean fluidVoidFading$modifyRenderDown(boolean renderUp, BlockAndTintGetter level, BlockPos pos, FluidRenderer.Output output, BlockState blockState, FluidState fluidState) {
+        if(fluidVoidFading$isDirectlyAboveVoid(level, pos)) {
+            return false;
+        }
+        return renderUp;
     }
-    
-    @Inject(method = "tesselate", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/block/LiquidBlockRenderer;isNeighborStateHidingOverlay(Lnet/minecraft/world/level/material/FluidState;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;)Z"))
-    public void render(BlockAndTintGetter level, BlockPos pos, VertexConsumer consumer, BlockState blockState, FluidState fluidState, CallbackInfo ci,
-                       @Local(ordinal = 0) int color, @Local TextureAtlasSprite[] sprites,
-                       @Local(ordinal = 3) FluidState north, @Local(ordinal = 4) FluidState south, @Local(ordinal = 5) FluidState west, @Local(ordinal = 6) FluidState east) {
-        if (pos.getY() != level.getMinY())
-            return;
 
-        Fluid fluid = fluidState.getType();
-        if (fluid != Fluids.EMPTY) {
-            float brightnessUp = level.getShade(Direction.UP, true);
-            float brightnessNorth = level.getShade(Direction.NORTH, true);
-            float brightnessWest = level.getShade(Direction.WEST, true);
+    @Inject(method = "tesselate", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/renderer/block/FluidRenderer;getLightCoords(Lnet/minecraft/client/renderer/block/BlockAndTintGetter;Lnet/minecraft/core/BlockPos;)I",
+            ordinal = 2, shift = At.Shift.AFTER))
+    public void fluidVoidFading$render(BlockAndTintGetter level, BlockPos pos, FluidRenderer.Output output, BlockState blockState, FluidState fluidState, CallbackInfo ci,
+        @Local(name = "builder") VertexConsumer builder, @Local(name = "x") float x, @Local(name = "y") float y, @Local(name = "z") float z,
+        @Local(name = "model") FluidModel model, @Local(name = "tintColor") int tintColor, @Local(name = "cardinalLighting") CardinalLighting cardinalLighting,
+        @Local(name = "renderNorth") boolean renderNorth, @Local(name = "renderSouth") boolean renderSouth, @Local(name = "renderWest") boolean renderWest, @Local(name = "renderEast") boolean renderEast,
+        @Local(name = "blockStateNorth") BlockState blockStateNorth, @Local(name = "blockStateSouth") BlockState blockStateSouth,
+        @Local(name = "blockStateWest") BlockState blockStateWest, @Local(name = "blockStateEast") BlockState blockStateEast) {
 
-            float xLo = (pos.getX() & 0xF);
-            float yLo = (pos.getY() & 0xF);
-            float zLo = (pos.getZ() & 0xF);
+        if (fluidVoidFading$isDirectlyAboveVoid(level, pos)) {
+            int sideLightCoords = this.getLightCoords(level, pos);
+            for (Direction faceDir : Direction.Plane.HORIZONTAL) {
+                float hh0;
+                float hh1;
+                float x0;
+                float z0;
+                float x1;
+                float z1;
+                boolean renderCondition;
+                BlockState faceState;
+                switch (faceDir) {
+                    case NORTH:
+                        hh0 = 1.0F;
+                        hh1 = 1.0F;
+                        x0 = x;
+                        x1 = x + 1.0F;
+                        z0 = z + 0.001F;
+                        z1 = z + 0.001F;
+                        renderCondition = renderNorth;
+                        faceState = blockStateNorth;
+                        break;
+                    case SOUTH:
+                        hh0 = 1.0F;
+                        hh1 = 1.0F;
+                        x0 = x + 1.0F;
+                        x1 = x;
+                        z0 = z + 1.0F - 0.001F;
+                        z1 = z + 1.0F - 0.001F;
+                        renderCondition = renderSouth;
+                        faceState = blockStateSouth;
+                        break;
+                    case WEST:
+                        hh0 = 1.0F;
+                        hh1 = 1.0F;
+                        x0 = x + 0.001F;
+                        x1 = x + 0.001F;
+                        z0 = z + 1.0F;
+                        z1 = z;
+                        renderCondition = renderWest;
+                        faceState = blockStateWest;
+                        break;
+                    case EAST:
+                        hh0 = 1.0F;
+                        hh1 = 1.0F;
+                        x0 = x + 1.0F - 0.001F;
+                        x1 = x + 1.0F - 0.001F;
+                        z0 = z;
+                        z1 = z + 1.0F;
+                        renderCondition = renderEast;
+                        faceState = blockStateEast;
+                        break;
+                    default:
+                        throw new UnsupportedOperationException();
+                }
 
-            int light = getLightColor(level, pos);
-            TextureAtlasSprite sprite = sprites[1]; // flowing sprite
-
-            float u1 = sprite.getU(0F);
-            float u2 = sprite.getU(0.5F);
-            float v1 = sprite.getV(0F);
-            float v2 = sprite.getV(0.5F);
-            int[] colors = unpackColor(color);
-            
-            float redF = colors[1] / 255F;
-            float greenF = colors[2] / 255F;
-            float blueF = colors[3] / 255F;
-            
-            float alpha1 = colors[0] / 255F;
-            float alpha2 = 0.3F * alpha1;
-
-            for (Direction dir : Direction.Plane.HORIZONTAL) { // directions
-                float x1, z1, x2, z2;
-                boolean shouldRender;
-                if (dir == Direction.NORTH) {
-                    x1 = xLo;
-                    x2 = xLo + 1F;
-                    z1 = zLo + 0.001F;
-                    z2 = zLo + 0.001F;
-                    shouldRender = isNeighborSameFluid(fluidState, north);
-                } else if (dir == Direction.SOUTH) {
-                    x1 = xLo + 1F;
-                    x2 = xLo;
-                    z1 = zLo + 0.999F;
-                    z2 = zLo + 0.999F;
-                    shouldRender = isNeighborSameFluid(fluidState, south);
-                } else if (dir == Direction.WEST) {
-                    x1 = xLo + 0.001F;
-                    x2 = xLo + 0.001F;
-                    z1 = zLo + 1F;
-                    z2 = zLo;
-                    shouldRender = isNeighborSameFluid(fluidState, west);
-                } else if (dir == Direction.EAST) {
-                    x1 = xLo + 0.999F;
-                    x2 = xLo + 0.999F;
-                    z1 = zLo;
-                    z2 = zLo + 1F;
-                    shouldRender = isNeighborSameFluid(fluidState, east);
-                } else continue;
-
-                if (!shouldRender) {
-                    float sidedBrightness = dir.getAxis() == Direction.Axis.Z ? brightnessNorth : brightnessWest;
-                    float red = brightnessUp * sidedBrightness * redF;
-                    float green = brightnessUp * sidedBrightness * greenF;
-                    float blue = brightnessUp * sidedBrightness * blueF;
-                    fluidvoidfading$vertex(consumer, x1, yLo + 0F, z1, red, green, blue, u1, v1, light, alpha1);
-                    fluidvoidfading$vertex(consumer, x2, yLo + 0F, z2, red, green, blue, u2, v1, light, alpha1);
-                    fluidvoidfading$vertex(consumer, x2, yLo - 1F, z2, red, green, blue, u2, v2, light, alpha2);
-                    fluidvoidfading$vertex(consumer, x1, yLo - 1F, z1, red, green, blue, u1, v2, light, alpha2);
-
-                    fluidvoidfading$vertex(consumer, x1, yLo - 1F, z1, red, green, blue, u1, v1, light, alpha2);
-                    fluidvoidfading$vertex(consumer, x2, yLo - 1F, z2, red, green, blue, u2, v1, light, alpha2);
-                    fluidvoidfading$vertex(consumer, x2, yLo - 2F, z2, red, green, blue, u2, v2, light, 0F);
-                    fluidvoidfading$vertex(consumer, x1, yLo - 2F, z1, red, green, blue, u1, v2, light, 0F);
-                    if (sprite != waterOverlay) {
-                        fluidvoidfading$vertex(consumer, x1, yLo - 1F, z1, red, green, blue, u1, v2, light, alpha2);
-                        fluidvoidfading$vertex(consumer, x2, yLo - 1F, z2, red, green, blue, u2, v2, light, alpha2);
-                        fluidvoidfading$vertex(consumer, x2, yLo + 0F, z2, red, green, blue, u2, v1, light, alpha1);
-                        fluidvoidfading$vertex(consumer, x1, yLo + 0F, z1, red, green, blue, u1, v1, light, alpha1);
-
-                        fluidvoidfading$vertex(consumer, x1, yLo - 2F, z1, red, green, blue, u1, v2, light, 0F);
-                        fluidvoidfading$vertex(consumer, x2, yLo - 2F, z2, red, green, blue, u2, v2, light, 0F);
-                        fluidvoidfading$vertex(consumer, x2, yLo - 1F, z2, red, green, blue, u2, v1, light, alpha2);
-                        fluidvoidfading$vertex(consumer, x1, yLo - 1F, z1, red, green, blue, u1, v1, light, alpha2);
+                if (renderCondition && !isFaceOccludedByNeighbor(faceDir, Math.max(hh0, hh1), faceState)) {
+                    TextureAtlasSprite sprite = model.flowingMaterial().sprite();
+                    boolean isOverlay = false;
+                    if (model.overlayMaterial() != null) {
+                        if (faceState.shouldDisplayFluidOverlay(level, pos.relative(faceDir), fluidState)) {
+                            sprite = model.overlayMaterial().sprite();
+                            isOverlay = true;
+                        }
                     }
+
+                    float u0 = sprite.getU(0.0F);
+                    float u1 = sprite.getU(0.5F);
+                    float v01 = sprite.getV((1.0F - hh0) * 0.5F);
+                    float v02 = sprite.getV((1.0F - hh1) * 0.5F);
+                    float v1 = sprite.getV(0.5F);
+                    float shadeSide = faceDir.getAxis() == Direction.Axis.Z ? cardinalLighting.north() : cardinalLighting.west();
+                    int faceColor = ARGB.scaleRGB(tintColor, cardinalLighting.up() * shadeSide);
+
+                    this.fluidVoidFading$addFaceWithAlpha(builder, x0, y - 1F + hh0, z0, u0, v01, x1, y - 1F + hh1, z1, u1, v02, x1, y - 1F, z1, u1, v1, x0, y - 1F, z0, u0, v1,
+                            faceColor, sideLightCoords, !isOverlay, 1F, 0.3F);
+                    this.fluidVoidFading$addFaceWithAlpha(builder, x0, y - 2F + hh0, z0, u0, v01, x1, y - 2F + hh1, z1, u1, v02, x1, y - 2F, z1, u1, v1, x0, y - 2F, z0, u0, v1,
+                            faceColor, sideLightCoords, !isOverlay, 0.3F, 0F);
                 }
             }
         }
     }
-    
-    @Unique
-    private static int[] unpackColor(int color) {
-        final int[] colors = new int[4];
-        colors[0] = color >> 24 & 0xff; // alpha
-        colors[1] = color >> 16 & 0xff; // red
-        colors[2] = color >> 8 & 0xff; // green
-        colors[3] = color & 0xff; // blue
-        return colors;
-    }
 
     @Unique
-    private void fluidvoidfading$vertex(VertexConsumer vertexConsumer, float x, float y, float z, float red, float green, float blue, float u, float v, int light, float alpha) {
-        vertexConsumer.addVertex(x, y, z).setColor(red, green, blue, alpha).setUv(u, v).setLight(light).setNormal(0F, 1F, 0F);
+    private void fluidVoidFading$addFaceWithAlpha(
+            VertexConsumer builder,
+            float x0, float y0, float z0, float u0, float v0,
+            float x1, float y1, float z1, float u1, float v1,
+            float x2, float y2, float z2, float u2, float v2,
+            float x3, float y3, float z3, float u3, float v3,
+            int color, int lightCoords, boolean addBackFace,
+            float alphaTop, float alphaBottom) {
+        int colorTop = withAlpha(color, alphaTop * byteToNormalizedFloat(unpackAlpha(color)));
+        int colorBottom = withAlpha(color, alphaBottom * byteToNormalizedFloat(unpackAlpha(color)));
+
+        this.fluidVoidFading$vertex(builder, x0, y0, z0, colorTop, u0, v0, lightCoords);
+        this.fluidVoidFading$vertex(builder, x1, y1, z1, colorTop, u1, v1, lightCoords);
+        this.fluidVoidFading$vertex(builder, x2, y2, z2, colorBottom, u2, v2, lightCoords);
+        this.fluidVoidFading$vertex(builder, x3, y3, z3, colorBottom, u3, v3, lightCoords);
+
+        if (addBackFace) {
+            this.fluidVoidFading$vertex(builder, x3, y3, z3, colorBottom, u3, v3, lightCoords);
+            this.fluidVoidFading$vertex(builder, x2, y2, z2, colorBottom, u2, v2, lightCoords);
+            this.fluidVoidFading$vertex(builder, x1, y1, z1, colorTop, u1, v1, lightCoords);
+            this.fluidVoidFading$vertex(builder, x0, y0, z0, colorTop, u0, v0, lightCoords);
+        }
     }
+
+    private void fluidVoidFading$vertex(VertexConsumer builder, float x, float y, float z, int color, float u, float v, int lightCoords) {
+        builder.addVertex(x, y, z, color, u, v, OverlayTexture.NO_OVERLAY, lightCoords, 0.0F, 1.0F, 0.0F);
+    }
+
+    private static int withAlpha(int rgb, float alpha) {
+        return withAlpha(rgb, normalizedFloatToByte(alpha));
+    }
+
+    private static int normalizedFloatToByte(float value) {
+        return (int)(value * 255.0F) & 255;
+    }
+
+    private static int withAlpha(int rgb, int alpha) {
+        return alpha << 24 | rgb & 16777215;
+    }
+
+    private static int unpackAlpha(int color) {
+        return color >> 24 & 255;
+    }
+
+    private static float byteToNormalizedFloat(int value) {
+        return (float)value * 0.003921569F;
+    }
+
 }

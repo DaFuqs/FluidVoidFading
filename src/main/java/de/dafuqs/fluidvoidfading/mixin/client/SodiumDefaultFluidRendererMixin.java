@@ -20,12 +20,15 @@ import net.caffeinemc.mods.sodium.client.services.PlatformBlockAccess;
 import net.caffeinemc.mods.sodium.client.util.DirectionUtil;
 import net.caffeinemc.mods.sodium.client.world.LevelSlice;
 import net.minecraft.client.*;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
+import net.minecraft.client.renderer.block.FluidModel;
 import net.minecraft.client.renderer.texture.*;
 import net.minecraft.core.*;
 import net.minecraft.tags.*;
 import net.minecraft.world.level.*;
 import net.minecraft.world.level.block.state.*;
 import net.minecraft.world.level.material.*;
+import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
@@ -73,17 +76,18 @@ public abstract class SodiumDefaultFluidRendererMixin {
     @Shadow @Final public static float EPSILON;
     
     @Inject(method = "render", at = @At("RETURN"))
-    public void render(LevelSlice level, BlockState blockState, FluidState fluidState, BlockPos blockPos, BlockPos offset, TranslucentGeometryCollector collector, ChunkModelBuilder meshBuilder, Material material, ColorProvider<FluidState> colorProvider, TextureAtlasSprite[] sprites, CallbackInfo ci) {
+    public void render(LevelSlice level, BlockState blockState, FluidState fluidState, BlockPos blockPos, BlockPos offset, TranslucentGeometryCollector collector, ChunkModelBuilder meshBuilder, Material material, ColorProvider<FluidState> colorProvider, FluidModel sprites, CallbackInfo ci) {
         if (blockPos.getY() != level.getMinY())
             return;
         boolean isWater = fluidState.is(FluidTags.WATER);
 
         final ModelQuadViewMutable quad = this.quad;
 
-        LightMode lightMode = isWater && Minecraft.useAmbientOcclusion() ? LightMode.SMOOTH : LightMode.FLAT;
+        LightMode lightMode = isWater && level.useAmbientOcclusion() ? LightMode.SMOOTH : LightMode.FLAT;
         LightPipeline lighter = this.lighters.getLighter(lightMode);
 
-        quad.setFlags(ModelQuadFlags.IS_PARALLEL | ModelQuadFlags.IS_ALIGNED);
+        //quad.setFlags(ModelQuadFlags.IS_PARALLEL | ModelQuadFlags.IS_ALIGNED);
+        quad.setFlags(0);
         for (Direction dir : DirectionUtil.HORIZONTAL_DIRECTIONS) {
             BlockState adjBlock = level.getBlockState(this.scratchPos.setWithOffset(blockPos, dir));
             if (!adjBlock.getFluidState().isEmpty())
@@ -112,15 +116,16 @@ public abstract class SodiumDefaultFluidRendererMixin {
                 z2 = 1F;
             } else continue;
             
-            TextureAtlasSprite sprite = sprites[1];
+            TextureAtlasSprite sprite;
 
             boolean isOverlay = false;
 
-            if (sprites.length > 2 && sprites[2] != null &&
-                PlatformBlockAccess.getInstance()
-                                   .shouldShowFluidOverlay(adjBlock, level, this.scratchPos, fluidState)) {
-                sprite = sprites[2];
+            Vec3 velocity = fluidState.getFlow(level, blockPos);
+            if (velocity.x == (double)0.0F && velocity.z == (double)0.0F) {
+                sprite = sprites.stillMaterial().sprite();
                 isOverlay = true;
+            } else {
+                sprite = sprites.flowingMaterial().sprite();
             }
 
             float u1 = sprite.getU(0F);
@@ -170,26 +175,22 @@ public abstract class SodiumDefaultFluidRendererMixin {
         quad.setFaceNormal(facing.isAligned() ? facing.getPackedAlignedNormal() : quad.calculateNormal());
         {
             int original = originalColors[0];
-            this.quadColors[0] = ColorABGR.withAlpha(original, alphaStart * ColorU8.byteToNormalizedFloat(
-                ColorABGR.unpackAlpha(original)));
+            this.quadColors[0] = ColorABGR.withAlpha(original, alphaStart * ColorU8.byteToNormalizedFloat(ColorABGR.unpackAlpha(original)));
             this.brightness[0] = this.quadLightData.br[0] * brightness;
         }
         {
             int original = originalColors[1];
-            this.quadColors[1] = ColorABGR.withAlpha(original, alphaEnd * ColorU8.byteToNormalizedFloat(
-                ColorABGR.unpackAlpha(original)));
+            this.quadColors[1] = ColorABGR.withAlpha(original, alphaEnd * ColorU8.byteToNormalizedFloat(ColorABGR.unpackAlpha(original)));
             this.brightness[1] = this.quadLightData.br[1] * brightness;
         }
         {
             int original = originalColors[2];
-            this.quadColors[2] = ColorABGR.withAlpha(original, alphaEnd * ColorU8.byteToNormalizedFloat(
-                ColorABGR.unpackAlpha(original)));
+            this.quadColors[2] = ColorABGR.withAlpha(original, alphaEnd * ColorU8.byteToNormalizedFloat(ColorABGR.unpackAlpha(original)));
             this.brightness[2] = this.quadLightData.br[2] * brightness;
         }
         {
             int original = originalColors[3];
-            this.quadColors[3] = ColorABGR.withAlpha(original, alphaStart * ColorU8.byteToNormalizedFloat(
-                ColorABGR.unpackAlpha(original)));
+            this.quadColors[3] = ColorABGR.withAlpha(original, alphaStart * ColorU8.byteToNormalizedFloat(ColorABGR.unpackAlpha(original)));
             this.brightness[3] = this.quadLightData.br[3] * brightness;
         }
     }
