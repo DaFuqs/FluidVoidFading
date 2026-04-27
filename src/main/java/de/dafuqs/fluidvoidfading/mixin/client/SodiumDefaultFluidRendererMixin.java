@@ -129,9 +129,9 @@ public abstract class SodiumDefaultFluidRendererMixin {
             }
 
             float u1 = sprite.getU(0F);
-            float u2 = sprite.getU(0.5F);
+            float u2 = sprite.getU(1.0F);
             float v1 = sprite.getV(0F);
-            float v2 = sprite.getV(0.5F);
+            float v2 = sprite.getV(1.0F);
 
             quad.setSprite(sprite);
 
