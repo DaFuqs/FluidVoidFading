@@ -4,9 +4,11 @@ import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.caffeinemc.mods.sodium.api.util.ColorABGR;
 import net.caffeinemc.mods.sodium.api.util.ColorU8;
+import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import net.minecraft.client.renderer.block.FluidModel;
 import net.minecraft.client.renderer.block.FluidRenderer;
+import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
@@ -38,6 +40,11 @@ public abstract class LiquidBlockRendererMixin {
     @Shadow
     protected abstract int getLightCoords(BlockAndTintGetter level, BlockPos pos);
 
+    @Shadow
+    private static boolean isNeighborSameFluid(FluidState fluidState, FluidState neighborFluidState) {
+        throw new UnsupportedOperationException("Implemented via mixin");
+    }
+
     @Unique
     private static boolean fluidVoidFading$isDirectlyAboveVoid(BlockGetter world, BlockPos blockPos) {
         return blockPos.getY() == world.getMinY();
@@ -55,13 +62,19 @@ public abstract class LiquidBlockRendererMixin {
             target = "Lnet/minecraft/client/renderer/block/FluidRenderer;getLightCoords(Lnet/minecraft/client/renderer/block/BlockAndTintGetter;Lnet/minecraft/core/BlockPos;)I",
             ordinal = 2, shift = At.Shift.AFTER))
     public void fluidVoidFading$render(BlockAndTintGetter level, BlockPos pos, FluidRenderer.Output output, BlockState blockState, FluidState fluidState, CallbackInfo ci,
-        @Local(name = "builder") VertexConsumer builder, @Local(name = "x") float x, @Local(name = "y") float y, @Local(name = "z") float z,
+        @Local(name = "builder") VertexConsumer builder2, @Local(name = "x") float x, @Local(name = "y") float y, @Local(name = "z") float z,
         @Local(name = "model") FluidModel model, @Local(name = "tintColor") int tintColor, @Local(name = "cardinalLighting") CardinalLighting cardinalLighting,
-        @Local(name = "renderNorth") boolean renderNorth, @Local(name = "renderSouth") boolean renderSouth, @Local(name = "renderWest") boolean renderWest, @Local(name = "renderEast") boolean renderEast,
+        @Local(name = "fluidStateNorth") FluidState fluidStateNorth, @Local(name = "fluidStateSouth") FluidState fluidStateSouth, @Local(name = "fluidStateWest") FluidState fluidStateWest, @Local(name = "fluidStateEast") FluidState fluidStateEast,
         @Local(name = "blockStateNorth") BlockState blockStateNorth, @Local(name = "blockStateSouth") BlockState blockStateSouth,
         @Local(name = "blockStateWest") BlockState blockStateWest, @Local(name = "blockStateEast") BlockState blockStateEast) {
 
         if (fluidVoidFading$isDirectlyAboveVoid(level, pos)) {
+            boolean renderNorth = !isNeighborSameFluid(fluidState, fluidStateNorth);
+            boolean renderSouth = !isNeighborSameFluid(fluidState, fluidStateSouth);
+            boolean renderWest = !isNeighborSameFluid(fluidState, fluidStateWest);
+            boolean renderEast = !isNeighborSameFluid(fluidState, fluidStateEast);
+
+            VertexConsumer builder = output.getBuilder(ChunkSectionLayer.TRANSLUCENT);
             int sideLightCoords = this.getLightCoords(level, pos);
             for (Direction faceDir : Direction.Plane.HORIZONTAL) {
                 float hh0;
@@ -117,7 +130,7 @@ public abstract class LiquidBlockRendererMixin {
                         throw new UnsupportedOperationException();
                 }
 
-                if (renderCondition && !isFaceOccludedByNeighbor(faceDir, Math.max(hh0, hh1), faceState)) {
+                if (renderCondition) {
                     TextureAtlasSprite sprite = model.flowingMaterial().sprite();
                     boolean isOverlay = false;
                     if (model.overlayMaterial() != null) {
