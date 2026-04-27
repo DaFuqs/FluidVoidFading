@@ -23,7 +23,7 @@ public final class Plugin implements IMixinConfigPlugin {
 	public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
 		boolean sodiumLoaded = LOADER.isModLoaded("sodium");
 		
-		if (mixinClassName.contains("SodiumFluidRendererMixin")) {
+		if (mixinClassName.contains("SodiumDefaultFluidRendererMixin")) {
 			return sodiumLoaded;
 		}
 		return !sodiumLoaded;

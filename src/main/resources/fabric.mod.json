@@ -14,22 +14,13 @@
   "license": "LGPLv3",
   "icon": "assets/fluidvoidfading/icon.png",
   "environment": "client",
-  "entrypoints": {
-    "client": [
-      "de.dafuqs.fluidvoidfading.FluidVoidFadingClient"
-    ],
-    "modmenu": [
-      "de.dafuqs.fluidvoidfading.config.ModMenuConfig"
-    ]
-  },
+  "entrypoints": {},
   "mixins": [
     "fluidvoidfading.mixins.json"
   ],
   "depends": {
     "minecraft": ">=${minecraft_version}",
-    "fabricloader": "*",
-    "fabric-api": "*",
-    "cloth-config": "*"
+    "fabricloader": "*"
   },
   "breaks": {
     "sodium": "<0.8.7"
