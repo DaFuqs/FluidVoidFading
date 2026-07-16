@@ -59,10 +59,6 @@ public abstract class SodiumDefaultFluidRendererMixin {
     }
 
     @Shadow
-    @Final
-    private LightPipelineProvider lighters;
-
-    @Shadow
     protected abstract void writeQuad(ChunkModelBuilder builder, TranslucentGeometryCollector collector, Material material, BlockPos offset, ModelQuadView quad, ModelQuadFacing facing, boolean flip);
 
     @Shadow
@@ -74,19 +70,25 @@ public abstract class SodiumDefaultFluidRendererMixin {
     private QuadLightData quadLightData;
     
     @Shadow @Final public static float EPSILON;
-    
+
+    @Shadow
+    @Final
+    private LightPipeline smoothLighter;
+
+    @Shadow
+    @Final
+    private LightPipeline flatLighter;
+
     @Inject(method = "render", at = @At("RETURN"))
     public void render(LevelSlice level, BlockState blockState, FluidState fluidState, BlockPos blockPos, BlockPos offset, TranslucentGeometryCollector collector, ChunkModelBuilder meshBuilder, Material material, ColorProvider<FluidState> colorProvider, FluidModel sprites, CallbackInfo ci) {
         if (blockPos.getY() != level.getMinY())
             return;
-        boolean isWater = fluidState.is(FluidTags.WATER);
 
+        boolean isWater = fluidState.is(FluidTags.WATER);
         final ModelQuadViewMutable quad = this.quad;
 
-        LightMode lightMode = isWater && level.useAmbientOcclusion() ? LightMode.SMOOTH : LightMode.FLAT;
-        LightPipeline lighter = this.lighters.getLighter(lightMode);
+        LightPipeline lighter = isWater && level.useAmbientOcclusion() ? this.smoothLighter : this.flatLighter;
 
-        //quad.setFlags(ModelQuadFlags.IS_PARALLEL | ModelQuadFlags.IS_ALIGNED);
         quad.setFlags(0);
         for (Direction dir : DirectionUtil.HORIZONTAL_DIRECTIONS) {
             BlockState adjBlock = level.getBlockState(this.scratchPos.setWithOffset(blockPos, dir));
@@ -116,17 +118,7 @@ public abstract class SodiumDefaultFluidRendererMixin {
                 z2 = 1F;
             } else continue;
             
-            TextureAtlasSprite sprite;
-
-            boolean isOverlay = false;
-
-            Vec3 velocity = fluidState.getFlow(level, blockPos);
-            if (velocity.x == (double)0.0F && velocity.z == (double)0.0F) {
-                sprite = sprites.stillMaterial().sprite();
-                isOverlay = true;
-            } else {
-                sprite = sprites.flowingMaterial().sprite();
-            }
+            TextureAtlasSprite sprite = sprites.flowingMaterial().sprite();
 
             float u1 = sprite.getU(0F);
             float u2 = sprite.getU(1.0F);
@@ -146,20 +138,22 @@ public abstract class SodiumDefaultFluidRendererMixin {
             lighter.calculate(quad, blockPos, this.quadLightData, null, dir, false, false);
             colorProvider.getColors(level, blockPos, this.scratchPos, fluidState, quad, this.quadColors, level.hasBiomeBlend());
 
-            int[] original = new int[]{ColorARGB.toABGR(this.quadColors[0]), ColorARGB.toABGR(this.quadColors[1]),
-                ColorARGB.toABGR(this.quadColors[2]), ColorARGB.toABGR(this.quadColors[3])};
+            int[] original = new int[]{
+                    ColorARGB.toABGR(this.quadColors[0]),
+                    ColorARGB.toABGR(this.quadColors[1]),
+                    ColorARGB.toABGR(this.quadColors[2]),
+                    ColorARGB.toABGR(this.quadColors[3])
+            };
 
             BlockPos downPos1 = offset.below(1);
             this.fluidvoidfading$updateQuadWithAlpha(quad, facing, br, original, 1F, 0.3F);
             this.writeQuad(meshBuilder, collector, material, downPos1, quad, facing, false);
-            if (!isOverlay)
-                this.writeQuad(meshBuilder, collector, material, downPos1, quad, facing.getOpposite(), true);
+            this.writeQuad(meshBuilder, collector, material, downPos1, quad, facing.getOpposite(), true);
 
             BlockPos downPos2 = offset.below(2);
             this.fluidvoidfading$updateQuadWithAlpha(quad, facing, br, original, 0.3F, 0F);
             this.writeQuad(meshBuilder, collector, material, downPos2, quad, facing, false);
-            if (!isOverlay)
-                this.writeQuad(meshBuilder, collector, material, downPos2, quad, facing.getOpposite(), true);
+            this.writeQuad(meshBuilder, collector, material, downPos2, quad, facing.getOpposite(), true);
         }
     }
 

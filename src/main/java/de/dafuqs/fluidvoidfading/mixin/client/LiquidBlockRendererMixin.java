@@ -11,8 +11,7 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.ARGB;
-import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.CardinalLighting;
+import net.minecraft.world.level.*;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HalfTransparentBlock;
 import net.minecraft.world.level.block.LeavesBlock;
@@ -37,17 +36,12 @@ public abstract class LiquidBlockRendererMixin {
         throw new UnsupportedOperationException("Implemented via mixin");
     }
 
-    @Unique
-    private static boolean fluidVoidFading$isDirectlyAboveVoid(BlockGetter world, BlockPos blockPos) {
-        return blockPos.getY() == world.getMinY();
-    }
-
     @ModifyVariable(method = "tesselate", at = @At(value = "STORE", ordinal = 0), name = "renderDown")
-    public boolean fluidVoidFading$modifyRenderDown(boolean renderUp, BlockAndTintGetter level, BlockPos pos, FluidRenderer.Output output, BlockState blockState, FluidState fluidState) {
-        if(fluidVoidFading$isDirectlyAboveVoid(level, pos)) {
+    public boolean fluidVoidFading$modifyRenderDown(boolean renderDown, BlockAndTintGetter level, BlockPos pos, FluidRenderer.Output output, BlockState blockState, FluidState fluidState) {
+        if(pos.getX() == level.getMinY()) {
             return false;
         }
-        return renderUp;
+        return renderDown;
     }
 
     @Inject(method = "tesselate", at = @At(value = "INVOKE",
@@ -60,7 +54,7 @@ public abstract class LiquidBlockRendererMixin {
         @Local(name = "blockStateNorth") BlockState blockStateNorth, @Local(name = "blockStateSouth") BlockState blockStateSouth,
         @Local(name = "blockStateWest") BlockState blockStateWest, @Local(name = "blockStateEast") BlockState blockStateEast) {
 
-        if (fluidVoidFading$isDirectlyAboveVoid(level, pos)) {
+        if (pos.getY() == level.getMinY()) {
             boolean renderNorth = !isNeighborSameFluid(fluidState, fluidStateNorth);
             boolean renderSouth = !isNeighborSameFluid(fluidState, fluidStateSouth);
             boolean renderWest = !isNeighborSameFluid(fluidState, fluidStateWest);
