@@ -1,34 +1,27 @@
 package de.dafuqs.fluidvoidfading.mixin.client;
 
-import net.caffeinemc.mods.sodium.api.util.ColorABGR;
-import net.caffeinemc.mods.sodium.api.util.ColorARGB;
-import net.caffeinemc.mods.sodium.api.util.ColorU8;
+import net.caffeinemc.mods.sodium.api.util.*;
 import net.caffeinemc.mods.sodium.client.model.color.ColorProvider;
-import net.caffeinemc.mods.sodium.client.model.light.LightMode;
 import net.caffeinemc.mods.sodium.client.model.light.LightPipeline;
-import net.caffeinemc.mods.sodium.client.model.light.LightPipelineProvider;
 import net.caffeinemc.mods.sodium.client.model.light.data.QuadLightData;
 import net.caffeinemc.mods.sodium.client.model.quad.ModelQuadView;
 import net.caffeinemc.mods.sodium.client.model.quad.ModelQuadViewMutable;
 import net.caffeinemc.mods.sodium.client.model.quad.properties.ModelQuadFacing;
-import net.caffeinemc.mods.sodium.client.model.quad.properties.ModelQuadFlags;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.buffers.ChunkModelBuilder;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.pipeline.DefaultFluidRenderer;
 import net.caffeinemc.mods.sodium.client.render.chunk.terrain.material.Material;
 import net.caffeinemc.mods.sodium.client.render.chunk.translucent_sorting.TranslucentGeometryCollector;
-import net.caffeinemc.mods.sodium.client.services.PlatformBlockAccess;
+import net.caffeinemc.mods.sodium.client.render.chunk.vertex.builder.*;
+import net.caffeinemc.mods.sodium.client.render.chunk.vertex.format.*;
 import net.caffeinemc.mods.sodium.client.util.DirectionUtil;
 import net.caffeinemc.mods.sodium.client.world.LevelSlice;
-import net.minecraft.client.*;
 import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import net.minecraft.client.renderer.block.FluidModel;
 import net.minecraft.client.renderer.texture.*;
 import net.minecraft.core.*;
 import net.minecraft.tags.*;
-import net.minecraft.world.level.*;
 import net.minecraft.world.level.block.state.*;
 import net.minecraft.world.level.material.*;
-import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
@@ -78,6 +71,10 @@ public abstract class SodiumDefaultFluidRendererMixin {
     @Shadow
     @Final
     private LightPipeline flatLighter;
+
+    @Shadow
+    @Final
+    private ChunkVertexEncoder.Vertex[] vertices;
 
     @Inject(method = "render", at = @At("RETURN"))
     public void render(LevelSlice level, BlockState blockState, FluidState fluidState, BlockPos blockPos, BlockPos offset, TranslucentGeometryCollector collector, ChunkModelBuilder meshBuilder, Material material, ColorProvider<FluidState> colorProvider, FluidModel sprites, CallbackInfo ci) {
@@ -147,13 +144,13 @@ public abstract class SodiumDefaultFluidRendererMixin {
 
             BlockPos downPos1 = offset.below(1);
             this.fluidvoidfading$updateQuadWithAlpha(quad, facing, br, original, 1F, 0.3F);
-            this.writeQuad(meshBuilder, collector, material, downPos1, quad, facing, false);
-            this.writeQuad(meshBuilder, collector, material, downPos1, quad, facing.getOpposite(), true);
+            fluidvoidfading$writeTranslucentQuad(meshBuilder, collector, material, downPos1, quad, facing, false);
+            fluidvoidfading$writeTranslucentQuad(meshBuilder, collector, material, downPos1, quad, facing.getOpposite(), true);
 
             BlockPos downPos2 = offset.below(2);
             this.fluidvoidfading$updateQuadWithAlpha(quad, facing, br, original, 0.3F, 0F);
-            this.writeQuad(meshBuilder, collector, material, downPos2, quad, facing, false);
-            this.writeQuad(meshBuilder, collector, material, downPos2, quad, facing.getOpposite(), true);
+            fluidvoidfading$writeTranslucentQuad(meshBuilder, collector, material, downPos2, quad, facing, false);
+            fluidvoidfading$writeTranslucentQuad(meshBuilder, collector, material, downPos2, quad, facing.getOpposite(), true);
         }
     }
 
@@ -187,5 +184,47 @@ public abstract class SodiumDefaultFluidRendererMixin {
             this.quadColors[3] = ColorABGR.withAlpha(original, alphaStart * ColorU8.byteToNormalizedFloat(ColorABGR.unpackAlpha(original)));
             this.brightness[3] = this.quadLightData.br[3] * brightness;
         }
+    }
+
+    @Unique
+    private void fluidvoidfading$writeTranslucentQuad(ChunkModelBuilder builder, TranslucentGeometryCollector collector, Material material, BlockPos offset, ModelQuadView quad, ModelQuadFacing facing, boolean flip) {
+        ChunkVertexEncoder.Vertex[] vertices = this.vertices;
+
+        for(int i = 0; i < 4; ++i) {
+            ChunkVertexEncoder.Vertex out = vertices[flip ? 3 - i + 1 & 3 : i];
+            out.x = (float)offset.getX() + quad.getX(i);
+            out.y = (float)offset.getY() + quad.getY(i);
+            out.z = (float)offset.getZ() + quad.getZ(i);
+            out.color = this.quadColors[i];
+            out.ao = this.brightness[i];
+            out.u = quad.getTexU(i);
+            out.v = quad.getTexV(i);
+            out.light = this.quadLightData.lm[i];
+        }
+
+        TextureAtlasSprite sprite = quad.getSprite();
+        if (sprite != null) {
+            builder.addSprite(sprite);
+        }
+
+        if (collector != null) {
+            int normal;
+            if (facing.isAligned()) {
+                normal = facing.getPackedAlignedNormal();
+            } else {
+                normal = quad.getFaceNormal();
+            }
+
+            if (flip) {
+                normal = NormI8.flipPacked(normal);
+            }
+
+            if (collector.appendQuad(vertices, facing, normal)) {
+                return;
+            }
+        }
+
+        ChunkMeshBufferBuilder vertexBuffer = builder.getVertexBuffer(facing);
+        vertexBuffer.push(vertices, material);
     }
 }
