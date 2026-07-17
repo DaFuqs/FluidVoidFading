@@ -1,10 +1,12 @@
 package de.dafuqs.fluidvoidfading.mixin;
 
-import net.fabricmc.loader.api.*;
-import org.objectweb.asm.tree.*;
-import org.spongepowered.asm.mixin.extensibility.*;
+import net.fabricmc.loader.api.FabricLoader;
+import org.objectweb.asm.tree.ClassNode;
+import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
+import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
-import java.util.*;
+import java.util.List;
+import java.util.Set;
 
 public final class Plugin implements IMixinConfigPlugin {
 	
@@ -23,7 +25,7 @@ public final class Plugin implements IMixinConfigPlugin {
 	public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
 		boolean sodiumLoaded = LOADER.isModLoaded("sodium");
 		
-		if (mixinClassName.contains("SodiumDefaultFluidRendererMixin")) {
+		if (mixinClassName.contains("Sodium")) {
 			return sodiumLoaded;
 		}
 		return !sodiumLoaded;

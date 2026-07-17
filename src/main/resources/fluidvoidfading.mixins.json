@@ -1,15 +1,17 @@
 {
-  "required": true,
-  "minVersion": "0.8",
-  "package": "de.dafuqs.fluidvoidfading.mixin",
-  "plugin": "de.dafuqs.fluidvoidfading.mixin.Plugin",
-  "compatibilityLevel": "JAVA_25",
-  "mixins": [],
-  "client": [
-    "client.LiquidBlockRendererMixin",
-    "client.SodiumDefaultFluidRendererMixin"
-  ],
-  "injectors": {
-    "defaultRequire": 1
+    "required": true,
+    "minVersion": "0.8",
+    "package": "de.dafuqs.fluidvoidfading.mixin",
+    "plugin": "de.dafuqs.fluidvoidfading.mixin.Plugin",
+    "compatibilityLevel": "JAVA_25",
+    "mixins": [
+    ],
+    "client": [
+        "client.LiquidBlockRendererMixin",
+        "client.SodiumDefaultFluidRendererMixin",
+        "client.SodiumFluidRendererImplMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
   }
 }
