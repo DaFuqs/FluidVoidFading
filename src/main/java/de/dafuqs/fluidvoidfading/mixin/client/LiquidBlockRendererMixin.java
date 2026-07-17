@@ -135,9 +135,9 @@ public abstract class LiquidBlockRendererMixin {
                     float shadeSide = faceDir.getAxis() == Direction.Axis.Z ? cardinalLighting.north() : cardinalLighting.west();
                     int faceColor = ARGB.scaleRGB(tintColor, cardinalLighting.up() * shadeSide);
 
-                    this.fluidVoidFading$addFaceWithAlpha(builder, x0, y - 1F + hh0, z0, u0, v01, x1, y - 1F + hh1, z1, u1, v02, x1, y - 1F, z1, u1, v1, x0, y - 1F, z0, u0, v1,
+                    this.fluidVoidFading$renderBlockWithAlpha(builder, x0, y - 1F + hh0, z0, u0, v01, x1, y - 1F + hh1, z1, u1, v02, x1, y - 1F, z1, u1, v1, x0, y - 1F, z0, u0, v1,
                             faceColor, sideLightCoords, !isOverlay, 1F, 0.3F);
-                    this.fluidVoidFading$addFaceWithAlpha(builder, x0, y - 2F + hh0, z0, u0, v01, x1, y - 2F + hh1, z1, u1, v02, x1, y - 2F, z1, u1, v1, x0, y - 2F, z0, u0, v1,
+                    this.fluidVoidFading$renderBlockWithAlpha(builder, x0, y - 2F + hh0, z0, u0, v01, x1, y - 2F + hh1, z1, u1, v02, x1, y - 2F, z1, u1, v1, x0, y - 2F, z0, u0, v1,
                             faceColor, sideLightCoords, !isOverlay, 0.3F, 0F);
                 }
             }
@@ -145,7 +145,7 @@ public abstract class LiquidBlockRendererMixin {
     }
 
     @Unique
-    private void fluidVoidFading$addFaceWithAlpha(
+    private void fluidVoidFading$renderBlockWithAlpha(
             VertexConsumer builder,
             float x0, float y0, float z0, float u0, float v0,
             float x1, float y1, float z1, float u1, float v1,
