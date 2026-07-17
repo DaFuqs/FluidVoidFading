@@ -1,5 +1,5 @@
 plugins {
-    id 'net.neoforged.gradle.userdev' version '7.1.21'
+    id 'net.neoforged.gradle.userdev' version "${neogradle_version}"
     id 'maven-publish'
     id 'idea'
 }
@@ -66,7 +66,7 @@ runs {
 dependencies {
     implementation "net.neoforged:neoforge:${neoforge_version}"
 
-    sodium "net.caffeinemc:sodium-neoforge-mod:0.8.9-beta.3+mc26.1" // sodium compat
+    sodium "net.caffeinemc:sodium-neoforge-mod:${sodium_version}" // sodium compat
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

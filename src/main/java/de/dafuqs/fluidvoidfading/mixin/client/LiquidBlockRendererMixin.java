@@ -2,9 +2,6 @@ package de.dafuqs.fluidvoidfading.mixin.client;
 
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.caffeinemc.mods.sodium.api.util.ColorABGR;
-import net.caffeinemc.mods.sodium.api.util.ColorU8;
-import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import net.minecraft.client.renderer.block.FluidModel;
 import net.minecraft.client.renderer.block.FluidRenderer;
@@ -14,8 +11,10 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.ARGB;
-import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.CardinalLighting;
+import net.minecraft.world.level.*;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.HalfTransparentBlock;
+import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import org.spongepowered.asm.mixin.Mixin;
@@ -30,14 +29,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class LiquidBlockRendererMixin {
 
     @Shadow
-    private static boolean isFaceOccludedByNeighbor(Direction direction, float height, BlockState neighborState) {
-        throw new UnsupportedOperationException("Implemented via mixin");
-    }
-
-    @Shadow
-    protected abstract void vertex(VertexConsumer builder, float x, float y, float z, int color, float u, float v, int lightCoords);
-
-    @Shadow
     protected abstract int getLightCoords(BlockAndTintGetter level, BlockPos pos);
 
     @Shadow
@@ -45,30 +36,25 @@ public abstract class LiquidBlockRendererMixin {
         throw new UnsupportedOperationException("Implemented via mixin");
     }
 
-    @Unique
-    private static boolean fluidVoidFading$isDirectlyAboveVoid(BlockGetter world, BlockPos blockPos) {
-        return blockPos.getY() == world.getMinY();
-    }
-
     @ModifyVariable(method = "tesselate", at = @At(value = "STORE", ordinal = 0), name = "renderDown")
-    public boolean fluidVoidFading$modifyRenderDown(boolean renderUp, BlockAndTintGetter level, BlockPos pos, FluidRenderer.Output output, BlockState blockState, FluidState fluidState) {
-        if(fluidVoidFading$isDirectlyAboveVoid(level, pos)) {
+    public boolean fluidVoidFading$modifyRenderDown(boolean renderDown, BlockAndTintGetter level, BlockPos pos, FluidRenderer.Output output, BlockState blockState, FluidState fluidState) {
+        if(pos.getX() == level.getMinY()) {
             return false;
         }
-        return renderUp;
+        return renderDown;
     }
 
     @Inject(method = "tesselate", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/renderer/block/FluidRenderer;getLightCoords(Lnet/minecraft/client/renderer/block/BlockAndTintGetter;Lnet/minecraft/core/BlockPos;)I",
             ordinal = 2, shift = At.Shift.AFTER))
     public void fluidVoidFading$render(BlockAndTintGetter level, BlockPos pos, FluidRenderer.Output output, BlockState blockState, FluidState fluidState, CallbackInfo ci,
-        @Local(name = "builder") VertexConsumer builder2, @Local(name = "x") float x, @Local(name = "y") float y, @Local(name = "z") float z,
-        @Local(name = "model") FluidModel model, @Local(name = "tintColor") int tintColor, @Local(name = "cardinalLighting") CardinalLighting cardinalLighting,
-        @Local(name = "fluidStateNorth") FluidState fluidStateNorth, @Local(name = "fluidStateSouth") FluidState fluidStateSouth, @Local(name = "fluidStateWest") FluidState fluidStateWest, @Local(name = "fluidStateEast") FluidState fluidStateEast,
-        @Local(name = "blockStateNorth") BlockState blockStateNorth, @Local(name = "blockStateSouth") BlockState blockStateSouth,
-        @Local(name = "blockStateWest") BlockState blockStateWest, @Local(name = "blockStateEast") BlockState blockStateEast) {
+                                       @Local(name = "x") float x, @Local(name = "y") float y, @Local(name = "z") float z,
+                                       @Local(name = "model") FluidModel model, @Local(name = "tintColor") int tintColor, @Local(name = "cardinalLighting") CardinalLighting cardinalLighting,
+                                       @Local(name = "fluidStateNorth") FluidState fluidStateNorth, @Local(name = "fluidStateSouth") FluidState fluidStateSouth, @Local(name = "fluidStateWest") FluidState fluidStateWest, @Local(name = "fluidStateEast") FluidState fluidStateEast,
+                                       @Local(name = "blockStateNorth") BlockState blockStateNorth, @Local(name = "blockStateSouth") BlockState blockStateSouth,
+                                       @Local(name = "blockStateWest") BlockState blockStateWest, @Local(name = "blockStateEast") BlockState blockStateEast) {
 
-        if (fluidVoidFading$isDirectlyAboveVoid(level, pos)) {
+        if (pos.getY() == level.getMinY()) {
             boolean renderNorth = !isNeighborSameFluid(fluidState, fluidStateNorth);
             boolean renderSouth = !isNeighborSameFluid(fluidState, fluidStateSouth);
             boolean renderWest = !isNeighborSameFluid(fluidState, fluidStateWest);
@@ -134,7 +120,8 @@ public abstract class LiquidBlockRendererMixin {
                     TextureAtlasSprite sprite = model.flowingMaterial().sprite();
                     boolean isOverlay = false;
                     if (model.overlayMaterial() != null) {
-                        if (faceState.shouldDisplayFluidOverlay(level, pos.relative(faceDir), fluidState)) {
+                        Block relativeBlock = faceState.getBlock();
+                        if (relativeBlock instanceof HalfTransparentBlock || relativeBlock instanceof LeavesBlock) {
                             sprite = model.overlayMaterial().sprite();
                             isOverlay = true;
                         }
@@ -148,9 +135,9 @@ public abstract class LiquidBlockRendererMixin {
                     float shadeSide = faceDir.getAxis() == Direction.Axis.Z ? cardinalLighting.north() : cardinalLighting.west();
                     int faceColor = ARGB.scaleRGB(tintColor, cardinalLighting.up() * shadeSide);
 
-                    this.fluidVoidFading$addFaceWithAlpha(builder, x0, y - 1F + hh0, z0, u0, v01, x1, y - 1F + hh1, z1, u1, v02, x1, y - 1F, z1, u1, v1, x0, y - 1F, z0, u0, v1,
+                    this.fluidVoidFading$renderBlockWithAlpha(builder, x0, y - 1F + hh0, z0, u0, v01, x1, y - 1F + hh1, z1, u1, v02, x1, y - 1F, z1, u1, v1, x0, y - 1F, z0, u0, v1,
                             faceColor, sideLightCoords, !isOverlay, 1F, 0.3F);
-                    this.fluidVoidFading$addFaceWithAlpha(builder, x0, y - 2F + hh0, z0, u0, v01, x1, y - 2F + hh1, z1, u1, v02, x1, y - 2F, z1, u1, v1, x0, y - 2F, z0, u0, v1,
+                    this.fluidVoidFading$renderBlockWithAlpha(builder, x0, y - 2F + hh0, z0, u0, v01, x1, y - 2F + hh1, z1, u1, v02, x1, y - 2F, z1, u1, v1, x0, y - 2F, z0, u0, v1,
                             faceColor, sideLightCoords, !isOverlay, 0.3F, 0F);
                 }
             }
@@ -158,7 +145,7 @@ public abstract class LiquidBlockRendererMixin {
     }
 
     @Unique
-    private void fluidVoidFading$addFaceWithAlpha(
+    private void fluidVoidFading$renderBlockWithAlpha(
             VertexConsumer builder,
             float x0, float y0, float z0, float u0, float v0,
             float x1, float y1, float z1, float u1, float v1,
