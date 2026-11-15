@@ -132,7 +132,7 @@ public abstract class SodiumDefaultFluidRendererMixin {
 
             ModelQuadFacing facing = ModelQuadFacing.fromDirection(dir);
 
-            lighter.calculate(quad, blockPos, this.quadLightData, null, dir, false, false);
+            lighter.calculate(quad, blockPos, this.quadLightData, null, dir, Direction.UP, false);
             colorProvider.getColors(level, blockPos, this.scratchPos, fluidState, quad, this.quadColors, level.hasBiomeBlend());
 
             int[] original = new int[]{
@@ -163,7 +163,7 @@ public abstract class SodiumDefaultFluidRendererMixin {
 
     @Unique
     private void fluidvoidfading$updateQuadWithAlpha(ModelQuadViewMutable quad, ModelQuadFacing facing, float brightness, int[] originalColors, float alphaStart, float alphaEnd) {
-        quad.setFaceNormal(facing.isAligned() ? facing.getPackedAlignedNormal() : quad.calculateNormal());
+        quad.setFaceNormal(facing.isAligned() ? facing.getPackedAlignedNormal() : quad.sodium$calculateNormal());
         {
             int original = originalColors[0];
             this.quadColors[0] = ColorABGR.withAlpha(original, alphaStart * ColorU8.byteToNormalizedFloat(ColorABGR.unpackAlpha(original)));
@@ -192,36 +192,24 @@ public abstract class SodiumDefaultFluidRendererMixin {
 
         for(int i = 0; i < 4; ++i) {
             ChunkVertexEncoder.Vertex out = vertices[flip ? 3 - i + 1 & 3 : i];
-            out.x = (float)offset.getX() + quad.getX(i);
-            out.y = (float)offset.getY() + quad.getY(i);
-            out.z = (float)offset.getZ() + quad.getZ(i);
+            out.x = (float)offset.getX() + quad.sodium$getX(i);
+            out.y = (float)offset.getY() + quad.sodium$getY(i);
+            out.z = (float)offset.getZ() + quad.sodium$getZ(i);
             out.color = this.quadColors[i];
             out.ao = this.brightness[i];
-            out.u = quad.getTexU(i);
-            out.v = quad.getTexV(i);
+            out.u = quad.sodium$getTexU(i);
+            out.v = quad.sodium$getTexV(i);
             out.light = this.quadLightData.lm[i];
         }
 
-        TextureAtlasSprite sprite = quad.getSprite();
-        if (sprite != null) {
-            builder.addSprite(sprite);
-        }
+        TextureAtlasSprite sprite = quad.sodium$getSprite();
+        if (sprite != null) builder.addSprite(sprite);
 
         if (collector != null) {
-            int normal;
-            if (facing.isAligned()) {
-                normal = facing.getPackedAlignedNormal();
-            } else {
-                normal = quad.getFaceNormal();
-            }
+            int normal = facing.isAligned() ? facing.getPackedAlignedNormal() : quad.sodium$calculateNormal();
+            if (flip) normal = NormI8.flipPacked(normal);
 
-            if (flip) {
-                normal = NormI8.flipPacked(normal);
-            }
-
-            if (collector.appendQuad(vertices, facing, normal)) {
-                return;
-            }
+            if (collector.appendQuad(vertices, facing, normal)) return;
         }
 
         ChunkMeshBufferBuilder vertexBuffer = builder.getVertexBuffer(facing);
