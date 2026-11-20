@@ -153,8 +153,8 @@ public abstract class LiquidBlockRendererMixin {
             float x3, float y3, float z3, float u3, float v3,
             int color, int lightCoords, boolean addBackFace,
             float alphaTop, float alphaBottom) {
-        int colorTop = withAlpha(color, alphaTop * byteToNormalizedFloat(unpackAlpha(color)));
-        int colorBottom = withAlpha(color, alphaBottom * byteToNormalizedFloat(unpackAlpha(color)));
+        int colorTop = ARGB.color(alphaTop * ARGB.alphaFloat(color), color);
+        int colorBottom = ARGB.color(alphaBottom * ARGB.alphaFloat(color), color);
 
         this.fluidVoidFading$vertex(builder, x0, y0, z0, colorTop, u0, v0, lightCoords);
         this.fluidVoidFading$vertex(builder, x1, y1, z1, colorTop, u1, v1, lightCoords);
@@ -169,28 +169,9 @@ public abstract class LiquidBlockRendererMixin {
         }
     }
 
+    @Unique
     private void fluidVoidFading$vertex(VertexConsumer builder, float x, float y, float z, int color, float u, float v, int lightCoords) {
         builder.addVertex(x, y, z, color, u, v, OverlayTexture.NO_OVERLAY, lightCoords, 0.0F, 1.0F, 0.0F);
-    }
-
-    private static int withAlpha(int rgb, float alpha) {
-        return withAlpha(rgb, normalizedFloatToByte(alpha));
-    }
-
-    private static int normalizedFloatToByte(float value) {
-        return (int)(value * 255.0F) & 255;
-    }
-
-    private static int withAlpha(int rgb, int alpha) {
-        return alpha << 24 | rgb & 16777215;
-    }
-
-    private static int unpackAlpha(int color) {
-        return color >> 24 & 255;
-    }
-
-    private static float byteToNormalizedFloat(int value) {
-        return (float)value * 0.003921569F;
     }
 
 }
