@@ -38,7 +38,7 @@ public abstract class LiquidBlockRendererMixin {
 
     @ModifyVariable(method = "tesselate", at = @At(value = "STORE", ordinal = 0), name = "renderDown")
     public boolean fluidVoidFading$modifyRenderDown(boolean renderDown, BlockAndTintGetter level, BlockPos pos, FluidRenderer.Output output, BlockState blockState, FluidState fluidState) {
-        if(pos.getX() == level.getMinY()) {
+        if(pos.getY() == level.getMinY()) {
             return false;
         }
         return renderDown;
